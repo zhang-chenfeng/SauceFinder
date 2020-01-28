@@ -1,3 +1,15 @@
+#----------------------------------------------------------------------------------
+# saucefinder.py
+# 
+# ChenFengZhang 2020
+# 
+#
+# dependencies:
+#   BeautifulSoup4
+#   Requests 2.2 or any version probably
+#
+#----------------------------------------------------------------------------------
+
 import tkinter as tk
 from requests import get
 from bs4 import BeautifulSoup
@@ -12,7 +24,6 @@ class Main(tk.Frame):
         self.prompt = tk.Label(root, text="Enter Sauce:")
         self.entry = tk.Entry(root, width=10)
         self.search = tk.Button(text="GO", command=self.renderPreview)
-        
         
         self.header.grid(row=0, column=0, columnspan=4, padx=(30, 30), pady=(15, 10))
         self.prompt.grid(row=1, column=0, padx=(5, 2))
@@ -31,7 +42,6 @@ class Main(tk.Frame):
         subtitle_l.grid(row=3, column=0, columnspan=4, padx=(30, 30), pady=(5, 10))
         
     
-
 def main():
     root = tk.Tk()
     gui = Main(root)
