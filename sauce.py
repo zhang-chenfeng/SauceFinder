@@ -1,16 +1,21 @@
 #----------------------------------------------------------------------------------
-# saucefinder.py
+#  saucefinder.py
 # 
-# ChenFengZhang 2020
+#  ChenFengZhang 2020
 # 
 #
-# dependencies:
-#   BeautifulSoup4
-#   Requests 2.2 or any version probably
+#  Dependencies:
+#
+#  - BeautifulSoup4
+#  - Requests v2.2 or any version probably
+#  - Pillow v7.0 or anything really
 #
 #----------------------------------------------------------------------------------
 
 import tkinter as tk
+from io import BytesIO
+
+from PIL import Image, ImageTk
 from requests import get
 from bs4 import BeautifulSoup
 
@@ -31,7 +36,7 @@ class Main(tk.Frame):
         self.search.grid(row=1, column=2, padx=(2, 5))
     
     def renderPreview(self):
-        title, subtitle, prev_img, fields = getHTML(self.entry.get())
+        title, subtitle, img_url, fields = getHTML(self.entry.get())
         length = len(fields)
         # print(title, length)
         
@@ -39,7 +44,18 @@ class Main(tk.Frame):
         subtitle_l = tk.Label(self.root, text=subtitle, font=(None, 12))
         
         title_l.grid(row=2, column=0, columnspan=4, padx=(30, 30), pady=(15, 5))
-        subtitle_l.grid(row=3, column=0, columnspan=4, padx=(30, 30), pady=(5, 10))
+        subtitle_l.grid(row=3, column=0, columnspan=4, padx=(0, 0), pady=(5, 10))
+        
+        ### temp
+        # img_url = "123202_files/cover.jpg"
+        response = get(img_url)
+        load = Image.open(BytesIO(response.content))
+        render = ImageTk.PhotoImage(load)
+        
+        cover_l = tk.Label(self.root, image=render)
+        cover_l.img = render
+        cover_l.grid(row=4, column=0, columnspan=2, padx=(30, 30), sticky=tk.W)
+        
         
     
 def main():
@@ -51,6 +67,7 @@ def main():
 def getHTML(magic_number):
     # generate url
     url = "".join(("https://nhentai.net/g/", str(magic_number)))
+    
     # get html
     # response = get(url)
     
