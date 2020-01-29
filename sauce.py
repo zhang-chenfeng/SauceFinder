@@ -50,7 +50,7 @@ class Main(tk.Frame):
         title_l = tk.Label(self.root, text=title, font=(None, 14))
         subtitle_l = tk.Label(self.root, text=subtitle, font=(None, 12))
         
-        title_l.grid(row=2, column=0, columnspan=5, padx=(30, 30), pady=(15, 5))
+        title_l.grid(row=2, column=0, columnspan=5, padx=(30, 30), pady=(15, 2))
         subtitle_l.grid(row=3, column=0, columnspan=5, padx=(0, 0), pady=(5, 10))
         
         ### temp
@@ -73,15 +73,14 @@ class Main(tk.Frame):
         cover_l.img = cover
         
         preview_f.grid(row=4, pady=(5, 10))
-        cover_l.grid(row=0, column=0, padx=(30, 30))        
+        cover_l.grid(row=0, column=0, padx=(30, 30), sticky=tk.N)        
         fields_f.grid(row=0, column=1, sticky=tk.N)
 
         # render fields & tags
         for n in range(length):
             field, tags = fields[n]
-            
-            tk.Label(fields_f, text=field, font=(None, 11)).grid(row=n, column=0, sticky=tk.E+tk.N, padx=(0, 10))
-            tk.Label(fields_f, text=", ".join(tags), font=(None, 10), wraplength=450, justify='left').grid(row=n, column=1, sticky=tk.W+tk.N)
+            tk.Label(fields_f, text=field, font=(None, 12)).grid(row=n, column=0, sticky=tk.E+tk.N, padx=(0, 10))
+            tk.Label(fields_f, text=", ".join(tags), font=(None, 11), wraplength=450, justify='left').grid(row=n, column=1, sticky=tk.W+tk.N)
         
         
     
@@ -95,7 +94,7 @@ def getHTML(magic_number):
     # generate url
     url = "".join(("https://nhentai.net/g/", str(magic_number)))
     
-    # get html
+    # get html  
     # response = get(url)
     
     # create beautifulsoup object
