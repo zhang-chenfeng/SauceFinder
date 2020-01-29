@@ -36,7 +36,7 @@ class Main(tk.Frame):
         
         self.header.grid(row=0, column=0, columnspan=5, padx=(30, 30), pady=(15, 10))
         
-        self.input_f.grid(row=1)
+        self.input_f.grid()
         self.prompt.grid(row=0, column=0, padx=(5, 2))
         self.entry.grid(row=0, column=1, padx=(2, 2))
         self.search.grid(row=0, column=2, padx=(2, 5))
@@ -64,18 +64,24 @@ class Main(tk.Frame):
         
         # preview frame
         preview_f = tk.Frame(self.root)
-        preview_f.grid(row=4)
         
+        # fields fram
+        fields_f = tk.Frame(preview_f)
+        
+        #cover image
         cover_l = tk.Label(preview_f, image=cover)
         cover_l.img = cover
-        cover_l.grid(row=0, column=0, rowspan = length, padx=(30, 30))
         
+        preview_f.grid(row=4, pady=(5, 10))
+        cover_l.grid(row=0, column=0, padx=(30, 30))        
+        fields_f.grid(row=0, column=1, sticky=tk.N)
+
         # render fields & tags
         for n in range(length):
             field, tags = fields[n]
             
-            tk.Label(preview_f, text=field, font=(None, 11)).grid(row=n, column=1, sticky=tk.E, padx=(0, 10))
-            tk.Label(preview_f, text=", ".join(tags), font=(None, 10)).grid(row=n, column=2, sticky=tk.W)
+            tk.Label(fields_f, text=field, font=(None, 11)).grid(row=n, column=0, sticky=tk.E+tk.N, padx=(0, 10))
+            tk.Label(fields_f, text=", ".join(tags), font=(None, 10), wraplength=450, justify='left').grid(row=n, column=1, sticky=tk.W+tk.N)
         
         
     
@@ -122,7 +128,6 @@ def getHTML(magic_number):
     
     return title, subtitle, img_url, fields
 
-    
     
 if __name__ == "__main__":
     main()
