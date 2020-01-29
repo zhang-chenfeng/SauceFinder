@@ -3,6 +3,7 @@ a script to generate a quick preview for your 6 digit numbers
 
 
 ### TODO
-- [ ] Image preview
+- [x] Image preview
 - [ ] Display tags correctly
 - [ ] Balance GUI
+- [ ] Another thread so the gui doesn't freeze if your internet sucks
