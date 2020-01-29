@@ -26,15 +26,22 @@ class Main(tk.Frame):
         root.title("Sauce Finder")
         
         self.header = tk.Label(root, text="Sauce Finder", font=(None, 12))
-        self.prompt = tk.Label(root, text="Enter Sauce:")
-        self.entry = tk.Entry(root, width=10)
-        self.search = tk.Button(text="GO", command=self.renderPreview)
         
-        self.header.grid(row=0, column=0, columnspan=4, padx=(30, 30), pady=(15, 10))
-        self.prompt.grid(row=1, column=0, padx=(5, 2))
-        self.entry.grid(row=1, column=1, padx=(2, 2))
-        self.search.grid(row=1, column=2, padx=(2, 5))
-    
+        self.input_f = tk.Frame(root)
+        
+        self.prompt = tk.Label(self.input_f, text="Enter Sauce:")
+        self.entry = tk.Entry(self.input_f, width=10)
+        self.search = tk.Button(self.input_f, text="GO", command=self.renderPreview)
+
+        
+        self.header.grid(row=0, column=0, columnspan=5, padx=(30, 30), pady=(15, 10))
+        
+        self.input_f.grid(row=1)
+        self.prompt.grid(row=0, column=0, padx=(5, 2))
+        self.entry.grid(row=0, column=1, padx=(2, 2))
+        self.search.grid(row=0, column=2, padx=(2, 5))
+
+
     def renderPreview(self):
         title, subtitle, img_url, fields = getHTML(self.entry.get())
         length = len(fields)
@@ -43,18 +50,32 @@ class Main(tk.Frame):
         title_l = tk.Label(self.root, text=title, font=(None, 14))
         subtitle_l = tk.Label(self.root, text=subtitle, font=(None, 12))
         
-        title_l.grid(row=2, column=0, columnspan=4, padx=(30, 30), pady=(15, 5))
-        subtitle_l.grid(row=3, column=0, columnspan=4, padx=(0, 0), pady=(5, 10))
+        title_l.grid(row=2, column=0, columnspan=5, padx=(30, 30), pady=(15, 5))
+        subtitle_l.grid(row=3, column=0, columnspan=5, padx=(0, 0), pady=(5, 10))
         
         ### temp
-        # img_url = "123202_files/cover.jpg"
-        response = get(img_url)
-        load = Image.open(BytesIO(response.content))
-        render = ImageTk.PhotoImage(load)
+        img_url = "123202_files/cover.jpg"
+        load = Image.open(img_url)
         
-        cover_l = tk.Label(self.root, image=render)
-        cover_l.img = render
-        cover_l.grid(row=4, column=0, columnspan=2, padx=(30, 30), sticky=tk.W)
+        # get image and load
+        # response = get(img_url)
+        # load = Image.open(BytesIO(response.content))
+        cover = ImageTk.PhotoImage(load)
+        
+        # preview frame
+        preview_f = tk.Frame(self.root)
+        preview_f.grid(row=4)
+        
+        cover_l = tk.Label(preview_f, image=cover)
+        cover_l.img = cover
+        cover_l.grid(row=0, column=0, rowspan = length, padx=(30, 30))
+        
+        # render fields & tags
+        for n in range(length):
+            field, tags = fields[n]
+            
+            tk.Label(preview_f, text=field, font=(None, 11)).grid(row=n, column=1, sticky=tk.E, padx=(0, 10))
+            tk.Label(preview_f, text=", ".join(tags), font=(None, 10)).grid(row=n, column=2, sticky=tk.W)
         
         
     
@@ -90,14 +111,14 @@ def getHTML(magic_number):
     img_url = cover_container.find('img')['data-src']
     
     # get all fields and tags
-    fields = {}
+    fields = []
     visible_fields = info.find_all(lambda x: x.has_attr('class') and 'tag-container' in x['class'] and 'hidden' not in x['class'])
     
     for field_div in visible_fields:
         field_name, vals = field_div.contents[:2]
         field_name = field_name.strip().strip(":")
 
-        fields[field_name] = [t.contents[0].strip() for t in vals.contents]
+        fields.append((field_name, [t.contents[0].strip() for t in vals.contents]))
     
     return title, subtitle, img_url, fields
 
