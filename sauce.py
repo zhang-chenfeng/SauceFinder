@@ -25,14 +25,13 @@ class Main(tk.Frame):
         self.root = root
         root.title("Sauce Finder")
         
-        self.header = tk.Label(root, text="Sauce Finder", font=(None, 12))
+        self.header = tk.Label(root, text="Sauce Finder", font=(None, 15))
         
         self.input_f = tk.Frame(root)
         
         self.prompt = tk.Label(self.input_f, text="Enter Sauce:")
         self.entry = tk.Entry(self.input_f, width=10)
-        self.search = tk.Button(self.input_f, text="GO", command=self.renderPreview)
-
+        self.search = tk.Button(self.input_f, text="GO", command=self.alternatePreview)
         
         self.header.grid(row=0, column=0, columnspan=5, padx=(30, 30), pady=(15, 10))
         
@@ -83,6 +82,57 @@ class Main(tk.Frame):
             tk.Label(fields_f, text=", ".join(tags), font=(None, 11), wraplength=450, justify='left').grid(row=n, column=1, sticky=tk.W+tk.N)
         
         
+    
+    def alternatePreview(self):
+        """
+        Alternate preview with title on the sidebar above the tags
+        Mimics the layout on nhentai
+        """
+        title, subtitle, img_url, fields = getHTML(self.entry.get())
+        length = len(fields)
+        # print(title, length)
+
+        ### temp
+        img_url = "123202_files/cover.jpg"
+        load = Image.open(img_url)
+        
+        # get image and load
+        # response = get(img_url)
+        # load = Image.open(BytesIO(response.content))
+        cover = ImageTk.PhotoImage(load)
+        
+        # preview frame
+        preview_f = tk.Frame(self.root)
+        
+        # fields frame
+        fields_f = tk.Frame(preview_f)
+        
+        # titles frame
+        title_f = tk.Frame(fields_f)
+        
+        # cover image
+        cover_l = tk.Label(preview_f, image=cover)
+        cover_l.img = cover
+        
+        # titles
+        title_l = tk.Label(title_f, text=title, font=(None, 14))
+        subtitle_l = tk.Label(title_f, text=subtitle, font=(None, 12))       
+        
+        preview_f.grid(row=4, pady=(5, 10))
+        cover_l.grid(row=0, column=0, padx=(30, 30), sticky=tk.N)
+        title_f.grid(row=0, column=0, columnspan=2)
+        fields_f.grid(row=0, column=1, sticky=tk.N)
+        
+        title_l.grid(row=0, padx=(20, 20), pady=(15, 2))
+        subtitle_l.grid(row=1, padx=(0, 0), pady=(5, 10))
+        
+        # render fields & tags
+        for n in range(length):
+            field, tags = fields[n]
+            tk.Label(fields_f, text=field, font=(None, 12)).grid(row=n+1, column=0, sticky=tk.E+tk.N, padx=(0, 10))
+            tk.Label(fields_f, text=", ".join(tags), font=(None, 11), wraplength=450, justify='left').grid(row=n+1, column=1, sticky=tk.W+tk.N)
+    
+    
     
 def main():
     root = tk.Tk()
