@@ -25,14 +25,25 @@ class Main(tk.Frame):
         tk.Frame.__init__(self, root)
         self.root = root
         root.title("Sauce Finder")
+        self.img_tmp = ImageTk.PhotoImage(Image.open("template.png"))
         
+        # header
         self.header = tk.Label(root, text="Sauce Finder", font=(None, 15))
         
+        # input frame
         self.input_f = tk.Frame(root)
-        
         self.prompt = tk.Label(self.input_f, text="Enter Sauce:")
         self.entry = tk.Entry(self.input_f, width=10)
         self.search = tk.Button(self.input_f, text="GO", command=self.renderPreview)
+        
+        # sub headers
+        self.title_l = tk.Label(self.root, text="", font=(None, 14))
+        self.subtitle_l = tk.Label(self.root, text="", font=(None, 12))
+        
+        # preview frame
+        self.preview_f = tk.Frame(self.root)
+        self.cover_l = tk.Label(self.preview_f, image=self.img_tmp)
+        self.fields_f = tk.Frame(self.preview_f)
         
         self.header.grid(row=0, column=0, columnspan=5, padx=(30, 30), pady=(15, 10))
         
@@ -40,18 +51,26 @@ class Main(tk.Frame):
         self.prompt.grid(row=0, column=0, padx=(5, 2))
         self.entry.grid(row=0, column=1, padx=(2, 2))
         self.search.grid(row=0, column=2, padx=(2, 5))
+        
+        self.title_l.grid(row=2, column=0, columnspan=5, padx=(30, 30), pady=(15, 2))
+        self.subtitle_l.grid(row=3, column=0, columnspan=5, padx=(0, 0), pady=(5, 10))
 
-
+        self.preview_f.grid(row=4, pady=(5, 10))
+        self.cover_l.grid(row=0, column=0, padx=(30, 30), sticky=tk.N)        
+        self.fields_f.grid(row=0, column=1, sticky=tk.N)
+        
+        
     def renderPreview(self):
         title, subtitle, img_url, fields, pages, upload_time = getHTML(self.entry.get())
+        
+        # page count and upload date are rendered same as fields in this view
+        fields.append(("Pages", [str(pages)]))
+        fields.append(("Uploaded", [upload_time]))
+        
         length = len(fields)
-        # print(title, length)
         
-        title_l = tk.Label(self.root, text=title, font=(None, 14))
-        subtitle_l = tk.Label(self.root, text=subtitle, font=(None, 12))
-        
-        title_l.grid(row=2, column=0, columnspan=5, padx=(30, 30), pady=(15, 2))
-        subtitle_l.grid(row=3, column=0, columnspan=5, padx=(0, 0), pady=(5, 10))
+        self.title_l['text'] = title
+        self.subtitle_l['text'] = subtitle
         
         ### temp
         img_url = "123202_files/cover.jpg"
@@ -62,29 +81,15 @@ class Main(tk.Frame):
         # load = Image.open(BytesIO(response.content))
         cover = ImageTk.PhotoImage(load)
         
-        # preview frame
-        preview_f = tk.Frame(self.root)
+        # I don't know why you have to do this- I just know that if you don't the picture won't appear
+        self.cover_l['image'] = cover
+        self.cover_l.image = cover
         
-        # fields fram
-        fields_f = tk.Frame(preview_f)
-        
-        #cover image
-        cover_l = tk.Label(preview_f, image=cover)
-        cover_l.img = cover
-        
-        preview_f.grid(row=4, pady=(5, 10))
-        cover_l.grid(row=0, column=0, padx=(30, 30), sticky=tk.N)        
-        fields_f.grid(row=0, column=1, sticky=tk.N)
-        
-        fields.append(("Pages", [str(pages)]))
-        fields.append(("Uploaded", [upload_time]))
-        length += 2
         # render fields & tags
         for n in range(length):
             field, tags = fields[n]
-            tk.Label(fields_f, text=field, font=(None, 12)).grid(row=n, column=0, sticky=tk.E+tk.N, padx=(0, 10))
-            tk.Label(fields_f, text=", ".join(tags), font=(None, 11), wraplength=450, justify='left').grid(row=n, column=1, sticky=tk.W+tk.N)
-        
+            tk.Label(self.fields_f, text=field, font=(None, 12)).grid(row=n, column=0, sticky=tk.E+tk.N)
+            tk.Label(self.fields_f, text=", ".join(tags), font=(None, 11), wraplength=450, justify='left').grid(row=n, column=1, sticky=tk.W+tk.N, padx=(10, 10), pady=(0, 20))       
     
     
 def main():
@@ -126,7 +131,7 @@ def getHTML(magic_number):
     
     # get number of pages
     pages = int(info.find('div', text=compile('pages')).string.split()[0])
-    
+
     # get upload time
     upload_time = info.find('time')['title']
     
