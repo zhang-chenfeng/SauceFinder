@@ -7,7 +7,8 @@ A program that will accept your 6 digit number and generate a preview correspond
 ### TODO
 - [x] Image preview
 - [x] Display tags correctly
-- [ ] Balance GUI
-- [ ] data fetch on a seperate thread so the gui doesn't freeze if your internet sucks
+- [x] Balance GUI (partially done, more improvements in future)
+- [x] data fetch on a seperate thread so the gui doesn't freeze if your internet sucks
+- [ ] general code improvements
 - [ ] full image previews maybe
 - [ ] downloading & saving?
