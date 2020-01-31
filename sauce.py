@@ -13,6 +13,9 @@
 #----------------------------------------------------------------------------------
 
 import tkinter as tk
+import time
+import threading
+import queue
 from io import BytesIO
 from re import compile
 
@@ -20,12 +23,14 @@ from PIL import Image, ImageTk
 from requests import get
 from bs4 import BeautifulSoup
 
-class Main(tk.Frame):
+class MainUI(tk.Frame):
     def __init__(self, root):
         tk.Frame.__init__(self, root)
         self.root = root
         root.title("Sauce Finder")
         self.img_tmp = ImageTk.PhotoImage(Image.open("template.png"))
+        self.q = queue.Queue()
+        self.sauce_data = ()
         
         # header
         self.header = tk.Label(root, text="Sauce Finder", font=(None, 15))
@@ -34,7 +39,7 @@ class Main(tk.Frame):
         self.input_f = tk.Frame(root)
         self.prompt = tk.Label(self.input_f, text="Enter Sauce:")
         self.entry = tk.Entry(self.input_f, width=10)
-        self.search = tk.Button(self.input_f, text="GO", command=self.renderPreview)
+        self.search = tk.Button(self.input_f, text="GO", command=self.fetchSauce)
         
         # sub headers
         self.title_l = tk.Label(self.root, text="", font=(None, 14))
@@ -61,7 +66,9 @@ class Main(tk.Frame):
         
         
     def renderPreview(self):
-        title, subtitle, img_url, fields, pages, upload_time = getHTML(self.entry.get())
+        self.title_l["text"] = "Loading..."
+        # title, subtitle, img_url, fields, pages, upload_time = getHTML(self.entry.get())
+        title, subtitle, img_url, fields, pages, upload_time = self.sauce_data
         
         # page count and upload date are rendered same as fields in this view
         fields.append(("Pages", [str(pages)]))
@@ -90,54 +97,93 @@ class Main(tk.Frame):
             field, tags = fields[n]
             tk.Label(self.fields_f, text=field, font=(None, 12)).grid(row=n, column=0, sticky=tk.E+tk.N)
             tk.Label(self.fields_f, text=", ".join(tags), font=(None, 11), wraplength=450, justify='left').grid(row=n, column=1, sticky=tk.W+tk.N, padx=(10, 10), pady=(0, 20))       
+
     
+    # Future loading events go in here
+    def loadDisplay(self):
+        self.search['state'] = 'disabled'
+        self.title_l['text'] = "Loading..."
+        
+    def loadDone(self):
+        self.search['state'] = 'normal'
     
+
+    def fetchSauce(self):
+        self.loadDisplay()
+        magic_number = self.entry.get()
+        
+        print("data fetch started for %s" %magic_number)
+        
+        NetworkRequest(self.q, magic_number).start()
+        self.root.after(100, self.awaitSauce)
+    
+    def awaitSauce(self):
+        try:
+            self.sauce_data = self.q.get(False) # if item is not availible raises queue.Empty error
+            print("sauce get")
+            self.loadDone()
+            self.renderPreview()
+        except queue.Empty:
+            print("waiting")
+            self.root.after(100, self.awaitSauce)
+
+
+class NetworkRequest(threading.Thread):
+    def __init__(self, q, magic_number):
+        threading.Thread.__init__(self)
+        self.q = q
+        self.number = magic_number
+        
+    # same thing as getHTML()
+    def run(self):
+        # generate url. magic_number is already a string by implementation but whatever
+        url = "".join(("https://nhentai.net/g/", str(self.number)))
+        
+        # get html  
+        # response = get(url)
+        # page = BeautifulSoup(response.text, 'html.parser')
+        
+        ## temp
+        with open(str(self.number) + '.html', 'rb') as html:
+            page = BeautifulSoup(html, 'html.parser')
+            
+        ### simulate sever latency when testing off local file
+        time.sleep(1.5)
+        
+        # div with all the preview info
+        info = page.find('div', id='info')
+        
+        # get titles
+        title = info.find('h1').string.strip()
+        subtitle = info.find('h2').string.strip()
+        
+        # get image preview
+        cover_container = page.find('div', id='cover')
+        img_url = cover_container.find('img')['data-src']
+        
+        # get all fields and tags
+        fields = []
+        visible_fields = info.find_all(lambda x: x.has_attr('class') and 'tag-container' in x['class'] and 'hidden' not in x['class'])
+        
+        for field_div in visible_fields:
+            field_name, vals = field_div.contents[:2]
+            fields.append((field_name.strip().strip(":"), [t.contents[0].strip() for t in vals.contents]))
+        
+        # get number of pages
+        pages = int(info.find('div', text=compile('pages')).string.split()[0])
+
+        # get upload time
+        upload_time = info.find('time')['title']
+        
+        self.q.put((title, subtitle, img_url, fields, pages, upload_time))
+
+
 def main():
     root = tk.Tk()
-    gui = Main(root)
+    gui = MainUI(root)
     root.mainloop()
 
 
-def getHTML(magic_number):
-    # generate url. magic_number is already a string by implementation but whatever
-    url = "".join(("https://nhentai.net/g/", str(magic_number)))
-    
-    # get html  
-    # response = get(url)
-    # page = BeautifulSoup(response.text, 'html.parser')
-    
-    ## temp
-    with open(str(magic_number) + '.html', 'rb') as html:
-        page = BeautifulSoup(html, 'html.parser')
-    
-    # div with all the preview info
-    info = page.find('div', id='info')
-    
-    # get titles
-    title = info.find('h1').string.strip()
-    subtitle = info.find('h2').string.strip()
-    
-    # get image preview
-    cover_container = page.find('div', id='cover')
-    img_url = cover_container.find('img')['data-src']
-    
-    # get all fields and tags
-    fields = []
-    visible_fields = info.find_all(lambda x: x.has_attr('class') and 'tag-container' in x['class'] and 'hidden' not in x['class'])
-    
-    for field_div in visible_fields:
-        field_name, vals = field_div.contents[:2]
-        fields.append((field_name.strip().strip(":"), [t.contents[0].strip() for t in vals.contents]))
-    
-    # get number of pages
-    pages = int(info.find('div', text=compile('pages')).string.split()[0])
-
-    # get upload time
-    upload_time = info.find('time')['title']
-    
-    return title, subtitle, img_url, fields, pages, upload_time
-
-    
 if __name__ == "__main__":
     main()
     
