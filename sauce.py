@@ -74,8 +74,6 @@ class MainUI(tk.Frame):
         fields.append(("Pages", [str(pages)]))
         fields.append(("Uploaded", [upload_time]))
         
-        length = len(fields)
-        
         self.title_l['text'] = title
         self.subtitle_l['text'] = subtitle
         
@@ -93,17 +91,16 @@ class MainUI(tk.Frame):
         self.cover_l.image = cover
         
         # render fields & tags
-        for n in range(length):
-            field, tags = fields[n]
-            tk.Label(self.fields_f, text=field, font=(None, 12)).grid(row=n, column=0, sticky=tk.E+tk.N)
-            tk.Label(self.fields_f, text=", ".join(tags), font=(None, 11), wraplength=450, justify='left').grid(row=n, column=1, sticky=tk.W+tk.N, padx=(10, 10), pady=(0, 20))       
+        for index, (field, tags) in enumerate(fields):
+            tk.Label(self.fields_f, text=field, font=(None, 12)).grid(row=index, column=0, sticky=tk.E+tk.N)
+            tk.Label(self.fields_f, text=", ".join(tags), font=(None, 11), wraplength=450, justify='left').grid(row=index, column=1, sticky=tk.W+tk.N, padx=(10, 10), pady=(0, 20))       
 
     
     # Future loading events go in here
     def loadDisplay(self):
         self.search['state'] = 'disabled'
         self.title_l['text'] = "Loading..."
-        
+    # and here
     def loadDone(self):
         self.search['state'] = 'normal'
     
@@ -113,18 +110,22 @@ class MainUI(tk.Frame):
         magic_number = self.entry.get()
         
         print("data fetch started for %s" %magic_number)
+        self.time_track = time.time()
         
         NetworkRequest(self.q, magic_number).start()
         self.root.after(100, self.awaitSauce)
     
+    
     def awaitSauce(self):
         try:
             self.sauce_data = self.q.get(False) # if item is not availible raises queue.Empty error
-            print("sauce get")
+            end_time = time.time()
+            print("response received: %fs elapsed" %(end_time-self.time_track))
+            
             self.loadDone()
             self.renderPreview()
+            
         except queue.Empty:
-            print("waiting")
             self.root.after(100, self.awaitSauce)
 
 
@@ -134,7 +135,7 @@ class NetworkRequest(threading.Thread):
         self.q = q
         self.number = magic_number
         
-    # same thing as getHTML()
+    # I don't think you are actually supposed to dump your code in run function
     def run(self):
         # generate url. magic_number is already a string by implementation but whatever
         url = "".join(("https://nhentai.net/g/", str(self.number)))
