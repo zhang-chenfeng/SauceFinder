@@ -68,7 +68,7 @@ class MainUI(tk.Frame):
     def renderPreview(self):
         self.title_l["text"] = "Loading..."
         # title, subtitle, img_url, fields, pages, upload_time = getHTML(self.entry.get())
-        title, subtitle, img_url, fields, pages, upload_time = self.sauce_data
+        title, subtitle, cover, fields, pages, upload_time = self.sauce_data
         
         # page count and upload date are rendered same as fields in this view
         fields.append(("Pages", [str(pages)]))
@@ -76,15 +76,6 @@ class MainUI(tk.Frame):
         
         self.title_l['text'] = title
         self.subtitle_l['text'] = subtitle
-        
-        ### temp
-        img_url = "123202_files/cover.jpg"
-        load = Image.open(img_url)
-        
-        # get image and load
-        # response = get(img_url)
-        # load = Image.open(BytesIO(response.content))
-        cover = ImageTk.PhotoImage(load)
         
         # I don't know why you have to do this- I just know that if you don't the picture won't appear
         self.cover_l['image'] = cover
@@ -97,21 +88,21 @@ class MainUI(tk.Frame):
 
     
     # Future loading events go in here
-    def loadDisplay(self):
+    def loadDisplay(self, magic_number):
         self.search['state'] = 'disabled'
-        self.title_l['text'] = "Loading..."
+        self.title_l['text'] = "Loading..."                
+        print("data fetch started for %s" %magic_number)
+        self.time_track = time.time()
     # and here
     def loadDone(self):
+        end_time = time.time()
+        print("response received %fs elapsed" %(end_time-self.time_track))
         self.search['state'] = 'normal'
     
 
     def fetchSauce(self):
-        self.loadDisplay()
         magic_number = self.entry.get()
-        
-        print("data fetch started for %s" %magic_number)
-        self.time_track = time.time()
-        
+        self.loadDisplay(magic_number)
         NetworkRequest(self.q, magic_number).start()
         self.root.after(100, self.awaitSauce)
     
@@ -119,9 +110,6 @@ class MainUI(tk.Frame):
     def awaitSauce(self):
         try:
             self.sauce_data = self.q.get(False) # if item is not availible raises queue.Empty error
-            end_time = time.time()
-            print("response received: %fs elapsed" %(end_time-self.time_track))
-            
             self.loadDone()
             self.renderPreview()
             
@@ -162,6 +150,16 @@ class NetworkRequest(threading.Thread):
         cover_container = page.find('div', id='cover')
         img_url = cover_container.find('img')['data-src']
         
+        ### temp
+        img_url = "123202_files/cover.jpg"
+        load = Image.open(img_url)
+        
+        # get image and load
+        # response = get(img_url)
+        # load = Image.open(BytesIO(response.content))
+        cover = ImageTk.PhotoImage(load)
+        
+        
         # get all fields and tags
         fields = []
         visible_fields = info.find_all(lambda x: x.has_attr('class') and 'tag-container' in x['class'] and 'hidden' not in x['class'])
@@ -172,11 +170,11 @@ class NetworkRequest(threading.Thread):
         
         # get number of pages
         pages = int(info.find('div', text=compile('pages')).string.split()[0])
-
+        
         # get upload time
         upload_time = info.find('time')['title']
         
-        self.q.put((title, subtitle, img_url, fields, pages, upload_time))
+        self.q.put((title, subtitle, cover, fields, pages, upload_time))
 
 
 def main():
