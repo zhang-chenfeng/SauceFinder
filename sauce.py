@@ -1,4 +1,4 @@
-#----------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------
 #  saucefinder.py
 # 
 #  ChenFengZhang 2020
@@ -10,7 +10,9 @@
 #  - Requests v2.2 or any version probably
 #  - Pillow v7.0 or anything really
 #
-#----------------------------------------------------------------------------------
+#  created in Python 3.7.4 but there's no reason why it wouldn't work on any version
+#  that isn't something ridiculous
+#------------------------------------------------------------------------------------
 
 import tkinter as tk
 import time
@@ -27,16 +29,20 @@ class MainUI(tk.Frame):
     def __init__(self, root):
         tk.Frame.__init__(self, root)
         self.root = root
-        root.title("Sauce Finder")
-        self.img_tmp = ImageTk.PhotoImage(Image.open("template.png"))
         self.q = queue.Queue()
         self.sauce_data = ()
+        self.baseUI()
+        
+    
+    def baseUI(self):
+        self.root.title("Sauce Finder")
+        self.img_tmp = ImageTk.PhotoImage(Image.open("template.png"))
         
         # header
-        self.header = tk.Label(root, text="Sauce Finder", font=(None, 15))
+        self.header = tk.Label(self.root, text="Sauce Finder", font=(None, 15))
         
         # input frame
-        self.input_f = tk.Frame(root)
+        self.input_f = tk.Frame(self.root)
         self.prompt = tk.Label(self.input_f, text="Enter Sauce:")
         self.entry = tk.Entry(self.input_f, width=10)
         self.search = tk.Button(self.input_f, text="GO", command=self.fetchSauce)
@@ -86,13 +92,13 @@ class MainUI(tk.Frame):
             tk.Label(self.fields_f, text=field, font=(None, 12)).grid(row=index, column=0, sticky=tk.E+tk.N)
             tk.Label(self.fields_f, text=", ".join(tags), font=(None, 11), wraplength=450, justify='left').grid(row=index, column=1, sticky=tk.W+tk.N, padx=(10, 10), pady=(0, 20))       
 
-    
     # Future loading events go in here
     def loadDisplay(self, magic_number):
         self.search['state'] = 'disabled'
         self.title_l['text'] = "Loading..."                
         print("data fetch started for %s" %magic_number)
         self.time_track = time.time()
+        
     # and here
     def loadDone(self):
         end_time = time.time()
@@ -103,7 +109,7 @@ class MainUI(tk.Frame):
     def fetchSauce(self):
         magic_number = self.entry.get()
         self.loadDisplay(magic_number)
-        NetworkRequest(self.q, magic_number).start()
+        threading.Thread(target=self.getValues, args=(self.q, magic_number)).start()
         self.root.after(100, self.awaitSauce)
     
     
@@ -115,25 +121,18 @@ class MainUI(tk.Frame):
             
         except queue.Empty:
             self.root.after(100, self.awaitSauce)
-
-
-class NetworkRequest(threading.Thread):
-    def __init__(self, q, magic_number):
-        threading.Thread.__init__(self)
-        self.q = q
-        self.number = magic_number
-        
-    # I don't think you are actually supposed to dump your code in run function
-    def run(self):
+    
+    
+    def getValues(self, q, magic_number):
         # generate url. magic_number is already a string by implementation but whatever
-        url = "".join(("https://nhentai.net/g/", str(self.number)))
+        url = "".join(("https://nhentai.net/g/", str(magic_number)))
         
         # get html  
         # response = get(url)
         # page = BeautifulSoup(response.text, 'html.parser')
         
         ## temp
-        with open(str(self.number) + '.html', 'rb') as html:
+        with open(str(magic_number) + '.html', 'rb') as html:
             page = BeautifulSoup(html, 'html.parser')
             
         ### simulate sever latency when testing off local file
@@ -153,12 +152,11 @@ class NetworkRequest(threading.Thread):
         ### temp
         img_url = "123202_files/cover.jpg"
         load = Image.open(img_url)
-        
+
         # get image and load
         # response = get(img_url)
         # load = Image.open(BytesIO(response.content))
         cover = ImageTk.PhotoImage(load)
-        
         
         # get all fields and tags
         fields = []
@@ -173,8 +171,8 @@ class NetworkRequest(threading.Thread):
         
         # get upload time
         upload_time = info.find('time')['title']
-        
-        self.q.put((title, subtitle, cover, fields, pages, upload_time))
+
+        q.put((title, subtitle, cover, fields, pages, upload_time))
 
 
 def main():
