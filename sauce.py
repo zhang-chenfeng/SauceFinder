@@ -146,10 +146,15 @@ class MainUI(tk.Frame):
         # div with all the preview info
         info = page.find('div', id='info')
         
-        print(info)
         # get titles
         title = info.find('h1').string.strip()
-        subtitle = info.find('h2').string.strip()
+        
+        s2 = info.find('h2')
+        if s2:
+            subtitle = s2.string.strip()
+        else:
+            subtitle = ""
+        
         
         # get image preview
         cover_container = page.find('div', id='cover')
@@ -175,7 +180,6 @@ class MainUI(tk.Frame):
         # get number of pages
         pages = int(info.find('div', text=compile('pages')).string.split()[0])
         
-        print(info.find('time'))
         # get upload time
         upload_time = info.find('time').text
 
