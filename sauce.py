@@ -55,7 +55,7 @@ class MainUI(tk.Frame):
         self.preview_f = tk.Frame(self.root)
         self.cover_l = tk.Label(self.preview_f, image=self.img_tmp)
         self.fields_f = tk.Frame(self.preview_f)
-        
+
         self.header.grid(row=0, column=0, padx=(30, 30), pady=(15, 10))
         
         self.input_f.grid(row=1, column=0)
@@ -93,11 +93,18 @@ class MainUI(tk.Frame):
         else: # make this another function later
             self.title_l['text'] = "File Not Found"
             self.subtitle_l['text'] = "server returned 404"
-        
+    
+    
+    def destroyChildren(self, frame):
+        for itm in frame.winfo_children():
+            itm.destroy()
+    
     # Future loading events go in here
-    def loadDisplay(self, magic_number):
+    def loadStart(self, magic_number):
         self.search['state'] = 'disabled'
-        self.title_l['text'] = "Loading..."                
+        self.title_l['text'] = "Loading..."
+        self.subtitle_l['text'] = "正在加载。。。"
+        self.destroyChildren(self.fields_f)
         print("data fetch started for %s" %magic_number)
         self.time_track = time.time()
         
@@ -110,7 +117,7 @@ class MainUI(tk.Frame):
 
     def fetchSauce(self):
         magic_number = self.entry.get()
-        self.loadDisplay(magic_number)
+        self.loadStart(magic_number)
         Thread(target=self.getValues, args=(self.q, magic_number)).start()
         self.root.after(100, self.awaitSauce)
     
