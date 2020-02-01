@@ -105,6 +105,7 @@ class MainUI(tk.Frame):
         self.title_l['text'] = "Loading..."
         self.subtitle_l['text'] = "正在加载。。。"
         self.destroyChildren(self.fields_f)
+        self.cover_l['image'] = self.img_tmp
         print("data fetch started for %s" %magic_number)
         self.time_track = time.time()
         
@@ -132,7 +133,7 @@ class MainUI(tk.Frame):
             self.root.after(100, self.awaitSauce)
     
     
-    def getValues(self, q, magic_number):
+    def getValues(self, q, magic_number):        
         # generate url. magic_number is already a string by implementation but whatever
         url = "".join(("https://nhentai.net/g/", str(magic_number)))
         
@@ -143,6 +144,8 @@ class MainUI(tk.Frame):
             return
         page = BeautifulSoup(response.text, 'html.parser')
         
+        blank_tag = page.new_tag('div')
+        blank_tag.string = ""
         ## temp
         # with open(str(magic_number) + '.html', 'rb') as html:
             # page = BeautifulSoup(html, 'html.parser')
@@ -153,15 +156,9 @@ class MainUI(tk.Frame):
         # div with all the preview info
         info = page.find('div', id='info')
         
-        # get titles
-        title = info.find('h1').string.strip()
-        
-        s2 = info.find('h2')
-        if s2:
-            subtitle = s2.string.strip()
-        else:
-            subtitle = ""
-        
+        # get titles - not sure if it's possible for title to also not exist but just to be safe
+        title = (info.find('h1') or blank_tag).string.strip()
+        subtitle = (info.find('h2') or blank_tag).string.strip()
         
         # get image preview
         cover_container = page.find('div', id='cover')
@@ -177,14 +174,13 @@ class MainUI(tk.Frame):
         cover = ImageTk.PhotoImage(load)
         
         # get all fields and tags
-        fields = []
         visible_fields = info.find_all(lambda x: x.has_attr('class') and 'tag-container' in x['class'] and 'hidden' not in x['class'])
-        
+        fields = []
         for field_div in visible_fields:
             field_name, vals = field_div.contents[:2]
             fields.append((field_name.strip().strip(":"), [t.contents[0].strip() for t in vals.contents]))
         
-        # get number of pages
+        # get number of pages- this should always exist I hope
         pages = int(info.find('div', text=compile('pages')).string.split()[0])
         
         # get upload time
