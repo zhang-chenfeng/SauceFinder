@@ -16,10 +16,10 @@
 
 import tkinter as tk
 import time
-import threading
 import queue
 from io import BytesIO
 from re import compile
+from threading import Thread
 
 from PIL import Image, ImageTk
 from requests import get
@@ -72,26 +72,28 @@ class MainUI(tk.Frame):
         
         
     def renderPreview(self):
-        self.title_l["text"] = "Loading..."
-        # title, subtitle, img_url, fields, pages, upload_time = getHTML(self.entry.get())
-        title, subtitle, cover, fields, pages, upload_time = self.sauce_data
-        
-        # page count and upload date are rendered same as fields in this view
-        fields.append(("Pages", [str(pages)]))
-        fields.append(("Uploaded", [upload_time]))
+        if self.sauce_data:        
+            title, subtitle, cover, fields, pages, upload_time = self.sauce_data
+            
+            # page count and upload date are rendered same as fields in this view
+            fields.append(("Pages", [str(pages)]))
+            fields.append(("Uploaded", [upload_time]))
 
-        self.title_l['text'] = title
-        self.subtitle_l['text'] = subtitle
+            self.title_l['text'] = title
+            self.subtitle_l['text'] = subtitle
+            
+            # I don't know why you have to do this- I just know that if you don't the picture won't appear
+            self.cover_l['image'] = cover
+            self.cover_l.image = cover
+            
+            # render fields & tags
+            for index, (field, tags) in enumerate(fields):
+                tk.Label(self.fields_f, text=field, font=(None, 12)).grid(row=index, column=0, sticky=tk.E+tk.N)
+                tk.Label(self.fields_f, text=", ".join(tags), font=(None, 12), wraplength=440, justify='left').grid(row=index, column=1, sticky=tk.W+tk.N, padx=(10, 0), pady=(0, 20))       
+        else: # make this another function later
+            self.title_l['text'] = "File Not Found"
+            self.subtitle_l['text'] = "server returned 404"
         
-        # I don't know why you have to do this- I just know that if you don't the picture won't appear
-        self.cover_l['image'] = cover
-        self.cover_l.image = cover
-        
-        # render fields & tags
-        for index, (field, tags) in enumerate(fields):
-            tk.Label(self.fields_f, text=field, font=(None, 12)).grid(row=index, column=0, sticky=tk.E+tk.N)
-            tk.Label(self.fields_f, text=", ".join(tags), font=(None, 12), wraplength=440, justify='left').grid(row=index, column=1, sticky=tk.W+tk.N, padx=(10, 0), pady=(0, 20))       
-
     # Future loading events go in here
     def loadDisplay(self, magic_number):
         self.search['state'] = 'disabled'
@@ -109,7 +111,7 @@ class MainUI(tk.Frame):
     def fetchSauce(self):
         magic_number = self.entry.get()
         self.loadDisplay(magic_number)
-        threading.Thread(target=self.getValues, args=(self.q, magic_number)).start()
+        Thread(target=self.getValues, args=(self.q, magic_number)).start()
         self.root.after(100, self.awaitSauce)
     
     
@@ -128,19 +130,23 @@ class MainUI(tk.Frame):
         url = "".join(("https://nhentai.net/g/", str(magic_number)))
         
         # get html  
-        # response = get(url)
-        # page = BeautifulSoup(response.text, 'html.parser')
+        response = get(url)
+        if not response.ok:
+            q.put([])
+            return
+        page = BeautifulSoup(response.text, 'html.parser')
         
         ## temp
-        with open(str(magic_number) + '.html', 'rb') as html:
-            page = BeautifulSoup(html, 'html.parser')
+        # with open(str(magic_number) + '.html', 'rb') as html:
+            # page = BeautifulSoup(html, 'html.parser')
             
         ### simulate sever latency when testing off local file
-        time.sleep(1.5)
+        # time.sleep(1.5)
         
         # div with all the preview info
         info = page.find('div', id='info')
         
+        print(info)
         # get titles
         title = info.find('h1').string.strip()
         subtitle = info.find('h2').string.strip()
@@ -150,12 +156,12 @@ class MainUI(tk.Frame):
         img_url = cover_container.find('img')['data-src']
         
         ### temp
-        img_url = "123202_files/cover.jpg"
-        load = Image.open(img_url)
+        # img_url = "123202_files/cover.jpg"
+        # load = Image.open(img_url)
 
         # get image and load
-        # response = get(img_url)
-        # load = Image.open(BytesIO(response.content))
+        response = get(img_url)
+        load = Image.open(BytesIO(response.content))
         cover = ImageTk.PhotoImage(load)
         
         # get all fields and tags
@@ -169,8 +175,9 @@ class MainUI(tk.Frame):
         # get number of pages
         pages = int(info.find('div', text=compile('pages')).string.split()[0])
         
+        print(info.find('time'))
         # get upload time
-        upload_time = info.find('time')['title']
+        upload_time = info.find('time').text
 
         q.put((title, subtitle, cover, fields, pages, upload_time))
 
