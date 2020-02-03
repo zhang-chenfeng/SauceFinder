@@ -86,6 +86,8 @@ class MainUI(tk.Frame):
             # I don't know why you have to do this- I just know that if you don't the picture won't appear
             self.cover_l['image'] = cover
             self.cover_l.image = cover
+            # oh I know why now, if you don't bind your image to something the garbage collector will delete it once the function returns 
+            # and the local variable goes out of scope
             
             # render fields & tags
             for index, (field, tags) in enumerate(fields):

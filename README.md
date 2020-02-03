@@ -12,3 +12,4 @@ This program will accept your 6 digit number(s) and generate a preview correspon
 - [x] general code improvements
 - [ ] full image previews maybe
 - [ ] downloading & saving?
+- [ ] probably some sort of input validation but anything wrong should just return 404
