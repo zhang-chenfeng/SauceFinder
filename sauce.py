@@ -25,6 +25,7 @@ from PIL import Image, ImageTk
 from requests import get
 from bs4 import BeautifulSoup
 
+
 class MainUI(tk.Frame):
     def __init__(self, root):
         tk.Frame.__init__(self, root)
