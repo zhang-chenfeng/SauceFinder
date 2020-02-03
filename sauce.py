@@ -48,6 +48,7 @@ class MainUI(tk.Frame):
         self.input_f = tk.Frame(self.root)
         self.prompt = tk.Label(self.input_f, text="Enter Sauce:")
         self.entry = tk.Entry(self.input_f, width=10)
+        self.entry.bind("<FocusIn>", lambda event: self.entry.selection_range(0, tk.END))
         self.search = tk.Button(self.input_f, text="GO", command=self.fetchSauce)
         
         # sub headers
@@ -135,6 +136,10 @@ class MainUI(tk.Frame):
     
 
     def fetchSauce(self):
+        # focus an arbitrary label to remove focus from the entry field so the onfocus event to highlight the text can trigger when refocused
+        # otherwise the entry will remain focused and the event can't trigger so the user would have to spam backspace or highlight manualy
+        self.header.focus() # lol this is really fucking stupid but I can't think of a better way to do this
+        
         self.magic_number = self.entry.get()
         if self.magic_number.isdigit():
             self.loadStart(self.magic_number)
