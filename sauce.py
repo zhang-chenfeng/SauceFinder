@@ -121,10 +121,13 @@ class MainUI(tk.Frame):
 
     def fetchSauce(self):
         magic_number = self.entry.get()
-        self.loadStart(magic_number)
-        Thread(target=self.getValues, args=(self.q, magic_number)).start()
-        self.root.after(100, self.awaitSauce)
-    
+        if magic_number.isdigit():
+            self.loadStart(magic_number)
+            Thread(target=self.getValues, args=(self.q, magic_number)).start()
+            self.root.after(100, self.awaitSauce)
+        else:
+            self.title_l['text'] = "invalid number"
+            self.subtitle_l['text'] = "无效号码"
     
     def awaitSauce(self):
         try:
