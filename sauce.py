@@ -31,7 +31,9 @@ class MainUI(tk.Frame):
         tk.Frame.__init__(self, root)
         self.root = root
         self.q = queue.Queue()
-        self.sauce_data = ()
+        self.magic_number = 0
+        self.memory = []
+        self.sauce_data = (1, 1, 1, 22, 22)
         self.baseUI()
         
     
@@ -55,8 +57,18 @@ class MainUI(tk.Frame):
         # preview frame
         self.preview_f = tk.Frame(self.root)
         self.cover_l = tk.Label(self.preview_f, image=self.img_tmp)
-        self.fields_f = tk.Frame(self.preview_f)
-
+        self.side_f = tk.Frame(self.preview_f)
+        self.fields_f = tk.Frame(self.side_f)
+        self.options_f = tk.Frame(self.side_f)
+        self.view_b = tk.Button(self.options_f, text="View", command=self.viewBook)
+        
+        # UI visualization for testing 
+        self.preview_f['bg'] = "red"
+        self.cover_l['bg'] = "blue"
+        self.side_f['bg'] = "green"
+        self.fields_f['bg'] = "yellow"
+        self.options_f['bg'] = "white"
+        
         self.header.grid(row=0, column=0, padx=(30, 30), pady=(15, 10))
         
         self.input_f.grid(row=1, column=0)
@@ -69,7 +81,10 @@ class MainUI(tk.Frame):
 
         self.preview_f.grid(row=4, padx=(30, 30), pady=(5, 15), sticky=tk.W+tk.E)
         self.cover_l.grid(row=0, column=0, padx=(10, 10), sticky=tk.N+tk.W)        
-        self.fields_f.grid(row=0, column=1, padx=(0, 10), sticky=tk.N)
+        self.side_f.grid(row=0, column=1, padx=(0, 10), sticky=tk.N)
+        self.fields_f.grid(row=0, sticky=tk.N)
+        self.options_f.grid(row=1, pady=(0, 10))
+        self.view_b.grid(column=0)
         
         
     def renderPreview(self):
@@ -120,14 +135,15 @@ class MainUI(tk.Frame):
     
 
     def fetchSauce(self):
-        magic_number = self.entry.get()
-        if magic_number.isdigit():
-            self.loadStart(magic_number)
-            Thread(target=self.getValues, args=(self.q, magic_number)).start()
+        self.magic_number = self.entry.get()
+        if self.magic_number.isdigit():
+            self.loadStart(self.magic_number)
+            Thread(target=self.getValues, args=(self.q, self.magic_number)).start()
             self.root.after(100, self.awaitSauce)
         else:
             self.title_l['text'] = "invalid number"
             self.subtitle_l['text'] = "无效号码"
+            
     
     def awaitSauce(self):
         try:
@@ -155,7 +171,7 @@ class MainUI(tk.Frame):
         ## temp
         # with open(str(magic_number) + '.html', 'rb') as html:
             # page = BeautifulSoup(html, 'html.parser')
-            
+        
         ### simulate sever latency when testing off local file
         # time.sleep(1.5)
         
@@ -169,7 +185,7 @@ class MainUI(tk.Frame):
         # get image preview
         cover_container = page.find('div', id='cover')
         img_url = cover_container.find('img')['data-src']
-        
+
         ### temp
         # img_url = "123202_files/cover.jpg"
         # load = Image.open(img_url)
@@ -193,6 +209,57 @@ class MainUI(tk.Frame):
         upload_time = info.find('time').text
 
         q.put((title, subtitle, cover, fields, pages, upload_time))
+
+
+    def viewBook(self):
+        Viewer(self.root, (self.magic_number, self.sauce_data[4]), self.memory)
+
+
+class Viewer(tk.Toplevel):
+    def __init__(self, base, book_data, memory):
+        tk.Toplevel.__init__(self, base)
+        self.sauce, self.pages = book_data
+        self.curr_page = 1
+        self.transient(base)
+        self.focus()
+        self.grab_set()
+        self.UI()
+        
+    
+    def UI(self):
+        self.img_l = tk.Label(self)
+        
+        self.desc_f = tk.Frame(self)
+        self.curr_page = tk.Label(self.desc_f)
+        self.img_desc = tk.Label(self.desc_f, text=" ".join(("of", str(self.pages))))
+        
+        self.img_l.grid(row=0, padx=(10, 10), pady=(10, 10))
+        self.desc_f.grid(row=1)
+        self.curr_page.grid(column=0, sticky=tk.E)
+        self.img_desc.grid(column=1, sticky=tk.W)
+
+
+    def renderPage(self):
+        try:
+            img = self.memory[self.curr_page - 1]
+            
+        except IndexError:
+            #download the image
+            pass
+        # display the image
+        self.cover_l['text'] = str(self.curr_page)
+        
+        
+    def nextPage(self):
+        if self.curr_page < self.pages:
+            self.curr_page += 1    
+            renderPage()
+            
+            
+    def prevPage(self):
+        if self.curr_page > 1:
+            self.curr_page -= 1
+            renderPage()
 
 
 def main():
