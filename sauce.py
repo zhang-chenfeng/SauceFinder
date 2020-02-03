@@ -224,23 +224,30 @@ class Viewer(tk.Toplevel):
     def __init__(self, base, book_data, memory):
         tk.Toplevel.__init__(self, base)
         self.sauce, self.pages = book_data
+        self.memory = memory
         self.curr_page = 1
         self.transient(base)
         self.focus()
+        self.pressed = False
+        self.bind('<Left>', self.prevPage)
+        self.bind('<KeyRelease-Left>', self.resetPress)
+        self.bind('<Right>', self.nextPage)
+        self.bind('<KeyRelease-Right>', self.resetPress)
         self.grab_set()
         self.UI()
+        self.renderPage()
         
     
     def UI(self):
         self.img_l = tk.Label(self)
         
         self.desc_f = tk.Frame(self)
-        self.curr_page = tk.Label(self.desc_f)
+        self.index = tk.Label(self.desc_f)
         self.img_desc = tk.Label(self.desc_f, text=" ".join(("of", str(self.pages))))
         
         self.img_l.grid(row=0, padx=(10, 10), pady=(10, 10))
         self.desc_f.grid(row=1)
-        self.curr_page.grid(column=0, sticky=tk.E)
+        self.index.grid(column=0, sticky=tk.E)
         self.img_desc.grid(column=1, sticky=tk.W)
 
 
@@ -252,21 +259,27 @@ class Viewer(tk.Toplevel):
             #download the image
             pass
         # display the image
-        self.cover_l['text'] = str(self.curr_page)
+        self.img_l['text'] = str(self.curr_page)
         
         
-    def nextPage(self):
-        if self.curr_page < self.pages:
+    def nextPage(self, event):
+        if not self.pressed and self.curr_page < self.pages:
             self.curr_page += 1    
-            renderPage()
+            self.renderPage()
+            self.pressed = True
+ 
             
-            
-    def prevPage(self):
-        if self.curr_page > 1:
+    def prevPage(self, event):
+        if not self.pressed and self.curr_page > 1:
             self.curr_page -= 1
-            renderPage()
-
-
+            self.renderPage()
+            self.pressed = True
+    
+    
+    def resetPress(self, event):
+        self.pressed = False
+        
+    
 def main():
     root = tk.Tk()
     gui = MainUI(root)
