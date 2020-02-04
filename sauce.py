@@ -32,7 +32,7 @@ class MainUI(tk.Frame):
         self.root = root
         self.q = queue.Queue()
         self.magic_number = 0
-        self.memory = []
+        self.memory = {}
         self.sauce_data = (1, 1, 1, 22, 22)
         self.baseUI()
         
@@ -224,18 +224,14 @@ class Viewer(tk.Toplevel):
     def __init__(self, base, book_data, memory):
         tk.Toplevel.__init__(self, base)
         self.sauce, self.pages = book_data
+        self.base = base
         self.memory = memory
         self.curr_page = 1
-        self.transient(base)
-        self.focus()
         self.pressed = False
-        self.bind('<Left>', self.prevPage)
-        self.bind('<KeyRelease-Left>', self.resetPress)
-        self.bind('<Right>', self.nextPage)
-        self.bind('<KeyRelease-Right>', self.resetPress)
-        self.grab_set()
+        self.loading = False
+        self.q = queue.Queue()
         self.UI()
-        self.renderPage()
+        self.loadPage()
         
     
     def UI(self):
@@ -245,41 +241,82 @@ class Viewer(tk.Toplevel):
         self.index = tk.Label(self.desc_f)
         self.img_desc = tk.Label(self.desc_f, text=" ".join(("of", str(self.pages))))
         
+        self.desc_f['bg'] = 'red'
+        self.index['bg'] = 'white'
+        self.img_desc['bg'] = 'beige'
+        
+        
         self.img_l.grid(row=0, padx=(10, 10), pady=(10, 10))
         self.desc_f.grid(row=1)
-        self.index.grid(column=0, sticky=tk.E)
-        self.img_desc.grid(column=1, sticky=tk.W)
+        self.index.grid(row=0, column=0, sticky=tk.E)
+        self.img_desc.grid(row=0, column=1, sticky=tk.W)
+                
+        self.transient(self.base) # popup appears as part of main window(not shown on taskbar)
+        self.focus() # give keyboard focus to the toplevel object(for key bindings)
+        self.grab_set() # prevent interaction with main window while viewer is open
+        
+        self.bind('<Left>', self.prevPage)
+        self.bind('<Right>', self.nextPage)
+        
+        # system to restrict 1 action per key press- change page functionality is disabled until key is released
+        self.bind('<KeyRelease-Left>', self.resetPress)
+        self.bind('<KeyRelease-Right>', self.resetPress)
 
 
     def renderPage(self):
+        self.index['text'] = str(self.curr_page)
+        # self.cover_l['image'] = self.memory[self.curr_page]
+
+
+    def loadPage(self):
+        self.loading = True
         try:
-            img = self.memory[self.curr_page - 1]
-            
-        except IndexError:
-            #download the image
-            pass
-        # display the image
-        self.img_l['text'] = str(self.curr_page)
+            image = self.memory[self.curr_page]
+            print("Already loaded")
+            self.q.put(0)
+        except KeyError:
+            ##thread it 
+            print("image download")
+            Thread(target=self.downloadImage, args=(self.sauce, self.curr_page, self.q, self.memory)).start()
+        self.waitImage()
+
+
+    def waitImage(self):
+        try:
+            response = self.q.get(False)
+            self.renderPage()
+            self.loading = False
+        except queue.Empty:
+            self.base.after(100, self.waitImage)
+
+    
+    def downloadImage(self, sauce, page, q, mem):
+        print("in thread")
+        time.sleep(1)
+        mem[page] = 1
+        q.put(0)
+        print("exit thread")
         
-        
+
     def nextPage(self, event):
-        if not self.pressed and self.curr_page < self.pages:
+        if not self.pressed and not self.loading and self.curr_page < self.pages:
             self.curr_page += 1    
-            self.renderPage()
-            self.pressed = True
- 
-            
-    def prevPage(self, event):
-        if not self.pressed and self.curr_page > 1:
-            self.curr_page -= 1
-            self.renderPage()
+            self.loadPage()
             self.pressed = True
     
+            
+    def prevPage(self, event):
+        if not self.pressed and not self.loading and self.curr_page > 1:
+            self.curr_page -= 1
+            self.loadPage()
+            self.pressed = True
+
     
     def resetPress(self, event):
         self.pressed = False
-        
-    
+
+
+
 def main():
     root = tk.Tk()
     gui = MainUI(root)
