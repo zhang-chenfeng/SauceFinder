@@ -35,8 +35,8 @@ class MainUI(tk.Frame):
         self.memory = {}
         self.sauce_data = (1, 1, 1, 22, 22)
         self.baseUI()
-        
-    
+
+
     def baseUI(self):
         self.root.title("Sauce Finder")
         self.img_tmp = ImageTk.PhotoImage(Image.open("template.png"))
@@ -86,8 +86,8 @@ class MainUI(tk.Frame):
         self.fields_f.grid(row=0, sticky=tk.N)
         self.options_f.grid(row=1, pady=(0, 10))
         self.view_b.grid(column=0)
-        
-        
+
+
     def renderPreview(self):
         if self.sauce_data:        
             title, subtitle, cover, fields, pages, upload_time = self.sauce_data
@@ -112,12 +112,12 @@ class MainUI(tk.Frame):
         else: # make this another function later
             self.title_l['text'] = "File Not Found"
             self.subtitle_l['text'] = "server returned 404"
-    
-    
+
+
     def destroyChildren(self, frame):
         for itm in frame.winfo_children():
             itm.destroy()
-    
+
     # Future loading events go in here
     def loadStart(self, magic_number):
         self.search['state'] = 'disabled'
@@ -127,13 +127,13 @@ class MainUI(tk.Frame):
         self.cover_l['image'] = self.img_tmp
         print("data fetch started for %s" %magic_number)
         self.time_track = time.time()
-        
+
     # and here
     def loadDone(self):
         end_time = time.time()
         print("response received %fs elapsed" %(end_time-self.time_track))
         self.search['state'] = 'normal'
-    
+
 
     def fetchSauce(self):
         # focus an arbitrary label to remove focus from the entry field so the onfocus event to highlight the text can trigger when refocused
@@ -148,8 +148,8 @@ class MainUI(tk.Frame):
         else:
             self.title_l['text'] = "invalid number"
             self.subtitle_l['text'] = "无效号码"
-            
-    
+
+
     def awaitSauce(self):
         try:
             self.sauce_data = self.q.get(False) # if item is not availible raises queue.Empty error
@@ -158,9 +158,9 @@ class MainUI(tk.Frame):
             
         except queue.Empty:
             self.root.after(100, self.awaitSauce)
-    
-    
-    def getValues(self, q, magic_number):        
+
+
+    def getValues(self, q, magic_number):
         # generate url. magic_number is already a string by implementation but whatever
         url = "".join(("https://nhentai.net/g/", str(magic_number)))
         
@@ -296,25 +296,24 @@ class Viewer(tk.Toplevel):
         mem[page] = 1
         q.put(0)
         print("exit thread")
-        
+
 
     def nextPage(self, event):
         if not self.pressed and not self.loading and self.curr_page < self.pages:
             self.curr_page += 1    
             self.loadPage()
             self.pressed = True
-    
-            
+
+
     def prevPage(self, event):
         if not self.pressed and not self.loading and self.curr_page > 1:
             self.curr_page -= 1
             self.loadPage()
             self.pressed = True
 
-    
+
     def resetPress(self, event):
         self.pressed = False
-
 
 
 def main():
@@ -325,4 +324,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
