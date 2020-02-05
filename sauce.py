@@ -33,7 +33,7 @@ class MainUI(tk.Frame):
         self.q = queue.Queue()
         self.magic_number = 0
         self.memory = {}
-        self.sauce_data = (1, 1, 1, 22, 22)
+        self.sauce_data = (1, 1, 1, 22, 22, 1, 222)
         self.baseUI()
 
 
@@ -90,7 +90,7 @@ class MainUI(tk.Frame):
 
     def renderPreview(self):
         if self.sauce_data:        
-            title, subtitle, cover, fields, pages, upload_time = self.sauce_data
+            title, subtitle, cover, fields, pages, upload_time, gallery = self.sauce_data
             
             # page count and upload date are rendered same as fields in this view
             fields.append(("Pages", [str(pages)]))
@@ -189,7 +189,8 @@ class MainUI(tk.Frame):
         
         # get image preview
         cover_container = page.find('div', id='cover')
-        img_url = cover_container.find('img')['data-src']
+        img_url = cover_container.find('img')['src']
+        gallery = int(img_url.split("/")[-2]) # not the be confused with the gallery in the url
 
         ### temp
         # img_url = "123202_files/cover.jpg"
@@ -213,17 +214,17 @@ class MainUI(tk.Frame):
         # get upload time
         upload_time = info.find('time').text
 
-        q.put((title, subtitle, cover, fields, pages, upload_time))
+        q.put((title, subtitle, cover, fields, pages, upload_time, gallery))
 
 
     def viewBook(self):
-        Viewer(self.root, (self.magic_number, self.sauce_data[4]), self.memory)
+        Viewer(self.root, (self.magic_number, self.sauce_data[4], self.sauce_data[6]), self.memory)
 
 
 class Viewer(tk.Toplevel):
     def __init__(self, base, book_data, memory):
         tk.Toplevel.__init__(self, base)
-        self.sauce, self.pages = book_data
+        self.sauce, self.pages, self.gallery = book_data
         self.base = base
         self.memory = memory
         self.curr_page = 1
@@ -265,7 +266,8 @@ class Viewer(tk.Toplevel):
 
     def renderPage(self):
         self.index['text'] = str(self.curr_page)
-        # self.cover_l['image'] = self.memory[self.curr_page]
+        self.img_l['text'] = self.memory[self.curr_page] # temppp
+        # self.img_l['image'] = self.memory[self.curr_page]
 
 
     def loadPage(self):
@@ -277,7 +279,7 @@ class Viewer(tk.Toplevel):
         except KeyError:
             ##thread it 
             print("image download")
-            Thread(target=self.downloadImage, args=(self.sauce, self.curr_page, self.q, self.memory)).start()
+            Thread(target=self.downloadImage, args=(self.gallery, self.curr_page, self.q, self.memory)).start()
         self.waitImage()
 
 
@@ -290,10 +292,13 @@ class Viewer(tk.Toplevel):
             self.base.after(100, self.waitImage)
 
     
-    def downloadImage(self, sauce, page, q, mem):
+    def downloadImage(self, gallery, page, q, mem):
         print("in thread")
+        url = "".join(("https://i.nhentai.net/galleries/", str(gallery), "/", str(page), ".jpg"))
+        # image = ImageTk.PhotoImage(Image.open(BytesIO(get(url).contents)))
+        image = str(gallery) + " - " + str(page) # temp
         time.sleep(1)
-        mem[page] = 1
+        mem[page] = image
         q.put(0)
         print("exit thread")
 
@@ -324,3 +329,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+#129190
