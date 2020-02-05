@@ -189,7 +189,8 @@ class MainUI(tk.Frame):
         
         # get image preview
         cover_container = page.find('div', id='cover')
-        img_url = cover_container.find('img')['src']
+        img_url = cover_container.find('img')['data-src']
+        print(img_url)
         gallery = int(img_url.split("/")[-2]) # not the be confused with the gallery in the url
 
         ### temp
@@ -224,7 +225,7 @@ class MainUI(tk.Frame):
 class Viewer(tk.Toplevel):
     def __init__(self, base, book_data, memory):
         tk.Toplevel.__init__(self, base)
-        self.sauce, self.pages, self.gallery = book_data
+        self.sauce, self.pages, self.gallery = book_data # self.sauce is currently useless
         self.base = base
         self.memory = memory
         self.curr_page = 1
@@ -266,8 +267,8 @@ class Viewer(tk.Toplevel):
 
     def renderPage(self):
         self.index['text'] = str(self.curr_page)
-        self.img_l['text'] = self.memory[self.curr_page] # temppp
-        # self.img_l['image'] = self.memory[self.curr_page]
+        # self.img_l['text'] = self.memory[self.curr_page] # temppp
+        self.img_l['image'] = self.memory[self.curr_page]
 
 
     def loadPage(self):
@@ -281,7 +282,7 @@ class Viewer(tk.Toplevel):
             print("image download")
             Thread(target=self.downloadImage, args=(self.gallery, self.curr_page, self.q, self.memory)).start()
         self.waitImage()
-
+        
 
     def waitImage(self):
         try:
@@ -295,9 +296,9 @@ class Viewer(tk.Toplevel):
     def downloadImage(self, gallery, page, q, mem):
         print("in thread")
         url = "".join(("https://i.nhentai.net/galleries/", str(gallery), "/", str(page), ".jpg"))
-        # image = ImageTk.PhotoImage(Image.open(BytesIO(get(url).contents)))
-        image = str(gallery) + " - " + str(page) # temp
-        time.sleep(1)
+        image = ImageTk.PhotoImage(Image.open(BytesIO(get(url).content)))
+        # image = str(gallery) + " - " + str(page) # temp
+        # time.sleep(1)
         mem[page] = image
         q.put(0)
         print("exit thread")
