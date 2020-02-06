@@ -4,3 +4,6 @@ env/
 # test files
 123202_files/
 123202.html
+
+# definitely don't want to upload this
+viewtest/
