@@ -62,6 +62,7 @@ class MainUI(tk.Frame):
         self.fields_f = tk.Frame(self.side_f)
         self.options_f = tk.Frame(self.side_f)
         self.view_b = tk.Button(self.options_f, text="View", command=self.viewBook)
+        self.link_b = tk.Button(self.options_f, text="Link")
         
         # UI visualization for testing 
         self.preview_f['bg'] = "red"
@@ -84,8 +85,9 @@ class MainUI(tk.Frame):
         self.cover_l.grid(row=0, column=0, padx=(10, 10), sticky=tk.N+tk.W)        
         self.side_f.grid(row=0, column=1, padx=(0, 10), sticky=tk.N)
         self.fields_f.grid(row=0, sticky=tk.N)
-        self.options_f.grid(row=1, pady=(0, 10))
-        self.view_b.grid(column=0)
+        # self.options_f.grid(row=1, pady=(0, 10))
+        self.view_b.grid(row=0, column=0)
+        self.link_b.grid(row=1, column=1)
 
 
     def renderPreview(self):
@@ -108,7 +110,9 @@ class MainUI(tk.Frame):
             # render fields & tags
             for index, (field, tags) in enumerate(fields):
                 tk.Label(self.fields_f, text=field, font=(None, 12)).grid(row=index, column=0, sticky=tk.E+tk.N)
-                tk.Label(self.fields_f, text=", ".join(tags), font=(None, 12), wraplength=440, justify='left').grid(row=index, column=1, sticky=tk.W+tk.N, padx=(10, 0), pady=(0, 20))       
+                tk.Label(self.fields_f, text=", ".join(tags), font=(None, 12), wraplength=440, justify='left').grid(row=index, column=1, sticky=tk.W+tk.N, padx=(10, 0), pady=(0, 20))
+            self.options_f.grid(row=1, pady=(0, 10))
+            
         else: # make this another function later
             self.title_l['text'] = "File Not Found"
             self.subtitle_l['text'] = "server returned 404"
@@ -125,6 +129,7 @@ class MainUI(tk.Frame):
         self.subtitle_l['text'] = "正在加载。。。"
         self.destroyChildren(self.fields_f)
         self.cover_l['image'] = self.img_tmp
+        self.options_f.grid_forget()
         print("data fetch started for %s" %magic_number)
         self.time_track = time.time()
 
