@@ -10,7 +10,7 @@ This program will accept your 6 digit number(s) and generate a preview correspon
 - [x] Balance GUI (partially done, more improvements in future)
 - [x] data fetch on a seperate thread so the gui doesn't freeze if your internet sucks
 - [x] general code improvements
-- [ ] full image previews maybe
+- [x] full image previews maybe
 - [ ] downloading & saving?
 - [x] probably some sort of input validation but anything wrong should just return 404
 - [ ] some sort of catch for connection timeout so it doesn't hang forever
