@@ -161,25 +161,19 @@ class MainUI(tk.Frame):
 
 
     def getValues(self, q, magic_number):
-        # generate url. magic_number is already a string by implementation but whatever
+        # magic_number is already a string by implementation but whatever
         url = "".join(("https://nhentai.net/g/", str(magic_number)))
         
-        # get html  
         response = get(url)
         if not response.ok:
             q.put([])
             return
+
         page = BeautifulSoup(response.text, 'html.parser')
         
         blank_tag = page.new_tag('div')
         blank_tag.string = ""
-        ## temp
-        # with open(str(magic_number) + '.html', 'rb') as html:
-            # page = BeautifulSoup(html, 'html.parser')
-        
-        ### simulate sever latency when testing off local file
-        # time.sleep(1.5)
-        
+
         # div with all the preview info
         info = page.find('div', id='info')
         
@@ -192,10 +186,6 @@ class MainUI(tk.Frame):
         img_url = cover_container.find('img')['data-src']
         print(img_url)
         gallery = int(img_url.split("/")[-2]) # not the be confused with the gallery in the url
-
-        ### temp
-        # img_url = "123202_files/cover.jpg"
-        # load = Image.open(img_url)
 
         # get image and load
         response = get(img_url)
@@ -278,7 +268,6 @@ class Viewer(tk.Toplevel):
             print("Already loaded")
             self.q.put(0)
         except KeyError:
-            ##thread it 
             print("image download")
             Thread(target=self.downloadImage, args=(self.gallery, self.curr_page, self.q, self.memory)).start()
         self.waitImage()
@@ -304,6 +293,7 @@ class Viewer(tk.Toplevel):
         mem[page] = image
         q.put(0)
         print("thread done")
+
 
     def nextPage(self, event):
         if not self.pressed and not self.loading and self.curr_page < self.pages:
@@ -331,4 +321,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-#129190
