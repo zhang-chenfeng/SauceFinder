@@ -294,15 +294,16 @@ class Viewer(tk.Toplevel):
 
     
     def downloadImage(self, gallery, page, q, mem):
-        print("in thread")
+        print("inthread")
         url = "".join(("https://i.nhentai.net/galleries/", str(gallery), "/", str(page), ".jpg"))
-        image = ImageTk.PhotoImage(Image.open(BytesIO(get(url).content)))
-        # image = str(gallery) + " - " + str(page) # temp
-        # time.sleep(1)
+        load = Image.open(BytesIO(get(url).content))
+        print("got image")
+        load = load.resize((516, 740), Image.ANTIALIAS)
+        print("resized")
+        image = ImageTk.PhotoImage(load)
         mem[page] = image
         q.put(0)
-        print("exit thread")
-
+        print("thread done")
 
     def nextPage(self, event):
         if not self.pressed and not self.loading and self.curr_page < self.pages:
