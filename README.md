@@ -13,6 +13,6 @@ This program will accept your 6 digit number(s) and generate a preview correspon
 - [ ] full image previews maybe
 - [ ] downloading & saving?
 - [x] probably some sort of input validation but anything wrong should just return 404
-- [ ] some sort of catch for connection timeout cause I have no idea what happens if your internet is off or nhentai is down
+- [ ] some sort of catch for connection timeout so it doesn't hang forever
 - [ ] add clicking support of the viewer
 - [ ] image downloading in background
