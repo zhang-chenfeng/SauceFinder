@@ -17,6 +17,7 @@
 import tkinter as tk
 import time
 import queue
+import webbrowser
 from io import BytesIO
 from re import compile
 from threading import Thread
@@ -33,7 +34,7 @@ class MainUI(tk.Frame):
         self.q = queue.Queue()
         self.magic_number = 0
         self.memory = {}
-        self.sauce_data = (1, 1, 1, 22, 22, 1, 222)
+        self.sauce_data = (1, 1, 1, 22, 22, 1, 222, "")
         self.baseUI()
 
 
@@ -65,10 +66,10 @@ class MainUI(tk.Frame):
         self.link_b = tk.Button(self.options_f, text="Link")
         
         # UI visualization for testing 
-        self.preview_f['bg'] = "red"
-        self.cover_l['bg'] = "blue"
-        self.side_f['bg'] = "green"
-        self.fields_f['bg'] = "yellow"
+        # self.preview_f['bg'] = "red"
+        # self.cover_l['bg'] = "blue"
+        # self.side_f['bg'] = "green"
+        # self.fields_f['bg'] = "yellow"
         self.options_f['bg'] = "white"
         
         self.header.grid(row=0, column=0, padx=(30, 30), pady=(15, 10))
@@ -87,12 +88,12 @@ class MainUI(tk.Frame):
         self.fields_f.grid(row=0, sticky=tk.N)
         # self.options_f.grid(row=1, pady=(0, 10))
         self.view_b.grid(row=0, column=0)
-        self.link_b.grid(row=1, column=1)
+        self.link_b.grid(row=0, column=1)
 
 
     def renderPreview(self):
         if self.sauce_data:        
-            title, subtitle, cover, fields, pages, upload_time, gallery = self.sauce_data
+            title, subtitle, cover, fields, pages, upload_time, gallery, url = self.sauce_data
             
             # page count and upload date are rendered same as fields in this view
             fields.append(("Pages", [str(pages)]))
@@ -111,7 +112,8 @@ class MainUI(tk.Frame):
             for index, (field, tags) in enumerate(fields):
                 tk.Label(self.fields_f, text=field, font=(None, 12)).grid(row=index, column=0, sticky=tk.E+tk.N)
                 tk.Label(self.fields_f, text=", ".join(tags), font=(None, 12), wraplength=440, justify='left').grid(row=index, column=1, sticky=tk.W+tk.N, padx=(10, 0), pady=(0, 20))
-            self.options_f.grid(row=1, pady=(0, 10))
+            self.link_b['command'] = lambda: webbrowser.open(url)
+            self.options_f.grid(row=1, pady=(0, 10), sticky=tk.W)
             
         else: # make this another function later
             self.title_l['text'] = "File Not Found"
@@ -189,7 +191,6 @@ class MainUI(tk.Frame):
         # get image preview
         cover_container = page.find('div', id='cover')
         img_url = cover_container.find('img')['data-src']
-        print(img_url)
         gallery = int(img_url.split("/")[-2]) # not the be confused with the gallery in the url
 
         # get image and load
@@ -210,7 +211,7 @@ class MainUI(tk.Frame):
         # get upload time
         upload_time = info.find('time').text
 
-        q.put((title, subtitle, cover, fields, pages, upload_time, gallery))
+        q.put((title, subtitle, cover, fields, pages, upload_time, gallery, url))
 
 
     def viewBook(self):
@@ -238,9 +239,9 @@ class Viewer(tk.Toplevel):
         self.index = tk.Label(self.desc_f)
         self.img_desc = tk.Label(self.desc_f, text=" ".join(("of", str(self.pages))))
         
-        self.desc_f['bg'] = 'red'
-        self.index['bg'] = 'white'
-        self.img_desc['bg'] = 'beige'
+        # self.desc_f['bg'] = 'red'
+        # self.index['bg'] = 'white'
+        # self.img_desc['bg'] = 'beige'
         
         
         self.img_l.grid(row=0, padx=(10, 10), pady=(10, 10))
