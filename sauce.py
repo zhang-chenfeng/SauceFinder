@@ -9,6 +9,7 @@
 #  - BeautifulSoup4
 #  - Requests v2.2 or any version probably
 #  - Pillow v7.0 or anything really
+#  - pywin32 whatever version is on PyPI right now
 #
 #  created in Python 3.7.4 but there's no reason why it wouldn't work on any version
 #  that isn't something ridiculous
@@ -25,17 +26,20 @@ from threading import Thread
 from PIL import Image, ImageTk
 from requests import get
 from bs4 import BeautifulSoup
+from win32api import EnumDisplayMonitors, GetMonitorInfo
 
 
 class MainUI(tk.Frame):
-    def __init__(self, root):
+    def __init__(self, root, dimensions):
         tk.Frame.__init__(self, root)
         self.root = root
+        self.width, self.height, = dimensions
         self.q = queue.Queue()
         self.magic_number = 0
         self.memory = {}
         self.sauce_data = (1, 1, 1, 22, 22, 1, 222, "")
         self.baseUI()
+        self.viewmode = 'scale'
 
 
     def baseUI(self):
@@ -45,12 +49,18 @@ class MainUI(tk.Frame):
         # header
         self.header = tk.Label(self.root, width=80, text="Sauce Finder", font=(None, 15))
         
+        # 2nd line frame
+        self.sub_f = tk.Frame(self.root, bg='red')
+        
         # input frame
-        self.input_f = tk.Frame(self.root)
+        self.input_f = tk.Frame(self.sub_f)
         self.prompt = tk.Label(self.input_f, text="Enter Sauce:")
         self.entry = tk.Entry(self.input_f, width=10)
         self.entry.bind("<FocusIn>", lambda event: self.entry.selection_range(0, tk.END))
         self.search = tk.Button(self.input_f, text="GO", command=self.fetchSauce)
+        
+        # settings
+        self.settings_b = tk.Button(self.sub_f, text="settings", command=self.viewSettings)
         
         # sub headers
         self.title_l = tk.Label(self.root, text=" ", font=(None, 14), wraplength=875)
@@ -74,10 +84,14 @@ class MainUI(tk.Frame):
         
         self.header.grid(row=0, column=0, padx=(30, 30), pady=(15, 10))
         
-        self.input_f.grid(row=1, column=0)
+        self.sub_f.grid(row=1, column=0, padx=(30, 30), sticky="ew")
+        
+        self.input_f.grid(row=0, column=0, padx=(300, 300))
         self.prompt.grid(row=0, column=0, padx=(5, 2))
         self.entry.grid(row=0, column=1, padx=(2, 2))
         self.search.grid(row=0, column=2, padx=(2, 5))
+        
+        self.settings_b.grid(row=0, column=1, sticky="e")
         
         self.title_l.grid(row=2, column=0, padx=(30, 30), pady=(15, 2), sticky=tk.E+tk.W)
         self.subtitle_l.grid(row=3, column=0, padx=(30, 30), pady=(5, 10), sticky=tk.E+tk.W)
@@ -132,13 +146,13 @@ class MainUI(tk.Frame):
         self.destroyChildren(self.fields_f)
         self.cover_l['image'] = self.img_tmp
         self.options_f.grid_forget()
-        print("data fetch started for %s" %magic_number)
+        print("data fetch started for {}".format(magic_number))
         self.time_track = time.time()
 
     # and here
     def loadDone(self):
         end_time = time.time()
-        print("response received %fs elapsed" %(end_time-self.time_track))
+        print("response received {}s elapsed".format(end_time-self.time_track))
         self.search['state'] = 'normal'
 
 
@@ -148,6 +162,12 @@ class MainUI(tk.Frame):
         self.header.focus() # lol this is really fucking stupid but I can't think of a better way to do this
         
         self.magic_number = self.entry.get()
+        
+        # for offline testing
+        if self.magic_number == "test":
+            self.offlineTesting()
+            return
+        
         if self.magic_number.isdigit():
             self.loadStart(self.magic_number)
             Thread(target=self.getValues, args=(self.q, self.magic_number)).start()
@@ -215,43 +235,45 @@ class MainUI(tk.Frame):
 
 
     def viewBook(self):
-        Viewer(self.root, (self.magic_number, self.sauce_data[4], self.sauce_data[6]), self.memory)
+        Viewer(self.root, self, (self.magic_number, self.sauce_data[4], self.sauce_data[6]), self.memory)
 
-
+    
+    def viewSettings(self):
+        Settings(self)
+    
+    
+    def offlineTesting(self):
+        self.loadStart("test")
+        self.sauce_data = ("kurashina", "asuka", ImageTk.PhotoImage(Image.open("untitled.png").resize((350, 511), Image.ANTIALIAS)), [("wow", ("this", "is", "legal?"))], 5, "time", 1, "http://softloli.moe")
+        self.loadDone()
+        self.renderPreview()
+        
+        
+    
 class Viewer(tk.Toplevel):
-    def __init__(self, base, book_data, memory):
+    def __init__(self, root, base, book_data, memory):
         tk.Toplevel.__init__(self, base)
         self.sauce, self.pages, self.gallery = book_data # self.sauce is currently useless
+        self.root = root
         self.base = base
         self.memory = memory
         self.curr_page = 1
         self.pressed = False
         self.loading = False
         self.q = queue.Queue()
+        self.xpad, self.ypad = 20, 20
         self.UI()
+        self.scaleView() # temppp
         self.loadPage()
         
     
     def UI(self):
-        self.img_l = tk.Label(self)
-        
-        self.desc_f = tk.Frame(self)
-        self.index = tk.Label(self.desc_f)
-        self.img_desc = tk.Label(self.desc_f, text=" ".join(("of", str(self.pages))))
-        
-        # self.desc_f['bg'] = 'red'
-        # self.index['bg'] = 'white'
-        # self.img_desc['bg'] = 'beige'
-        
-        
-        self.img_l.grid(row=0, padx=(10, 10), pady=(10, 10))
-        self.desc_f.grid(row=1)
-        self.index.grid(row=0, column=0, sticky=tk.E)
-        self.img_desc.grid(row=0, column=1, sticky=tk.W)
-                
         self.transient(self.base) # popup appears as part of main window(not shown on taskbar)
         self.focus() # give keyboard focus to the toplevel object(for key bindings)
         self.grab_set() # prevent interaction with main window while viewer is open
+        
+        self.display_f = tk.Frame(self)
+        self.display_f.pack(padx=(self.xpad, self.xpad), pady=(self.ypad, self.ypad))
         
         self.bind('<Left>', self.prevPage)
         self.bind('<Right>', self.nextPage)
@@ -261,10 +283,26 @@ class Viewer(tk.Toplevel):
         self.bind('<KeyRelease-Right>', self.resetPress)
 
 
+    def scaleView(self):
+        win_h = self.base.height - 32 # 26px header + 2 * 3px border
+        self.img_h = win_h - 2 * self.ypad
+        self.img_w = int(self.img_h * 0.6968)
+        win_w = self.img_w + 2 * self.xpad
+        
+        self.geometry("{}x{}+{}+0".format(self.img_w, win_h, (self.base.width - self.img_w) // 2))
+        self.update_idletasks() # required for whatever reason
+
+        self.img_l = tk.Label(self.display_f)
+        self.img_l.grid()
+        
+    
+    def scrollView(self):
+        pass
+    
+
     def renderPage(self):
-        self.index['text'] = str(self.curr_page)
-        # self.img_l['text'] = self.memory[self.curr_page] # temppp
         self.img_l['image'] = self.memory[self.curr_page]
+        print(self.memory[self.curr_page])
 
 
     def loadPage(self):
@@ -274,8 +312,17 @@ class Viewer(tk.Toplevel):
             print("Already loaded")
             self.q.put(0)
         except KeyError:
-            print("image download")
-            Thread(target=self.downloadImage, args=(self.gallery, self.curr_page, self.q, self.memory)).start()
+            
+            # offline testing
+            if self.base.magic_number == "test":
+                self.memory[self.curr_page] = ImageTk.PhotoImage(Image.open("u" + str(self.curr_page) + ".png").resize((self.img_w, self.img_h), Image.ANTIALIAS))
+                print("load testing image")
+                self.q.put(0)
+                self.loading = False
+            
+            else:
+                print("image download")
+                Thread(target=self.downloadImage, args=(self.gallery, self.curr_page, self.q, self.memory)).start()
         self.waitImage()
         
 
@@ -285,7 +332,7 @@ class Viewer(tk.Toplevel):
             self.renderPage()
             self.loading = False
         except queue.Empty:
-            self.base.after(100, self.waitImage)
+            self.root.after(100, self.waitImage)
 
     
     def downloadImage(self, gallery, page, q, mem):
@@ -302,6 +349,7 @@ class Viewer(tk.Toplevel):
 
 
     def nextPage(self, event):
+        print("next")
         if not self.pressed and not self.loading and self.curr_page < self.pages:
             self.curr_page += 1    
             self.loadPage()
@@ -309,6 +357,7 @@ class Viewer(tk.Toplevel):
 
 
     def prevPage(self, event):
+        print("prev")
         if not self.pressed and not self.loading and self.curr_page > 1:
             self.curr_page -= 1
             self.loadPage()
@@ -317,11 +366,62 @@ class Viewer(tk.Toplevel):
 
     def resetPress(self, event):
         self.pressed = False
+        
+    
+    # testing alternative ui
+    def altUI(self):
+        self.canvas = tk.Canvas(self)
+
+
+
+class Settings(tk.Toplevel):
+    def __init__(self, base):
+        tk.Toplevel.__init__(self, base)
+        self.base = base
+        self.view_options = ""
+        self.selection = tk.StringVar()
+        self.selection.set("scaled")
+        self.UI()
+
+        
+    def UI(self):
+        self.transient(self.base)
+        self.grab_set()
+        self.focus()
+        
+        self.l = tk.Label(self, text="viewer mode")
+        self.l.grid(row=0, column=0)
+        
+        tk.Radiobutton(self, text="scaled", variable=self.selection, value="scaled").grid(row=0, column=1)
+        tk.Radiobutton(self, text="scrolled", variable=self.selection, value="scrolled").grid(row=0, column=2)
+        
+        self.ok = tk.Button(self, text="ok", command=self.exit)
+        self.cancel = tk.Button(self, text="cancel", command=self.destroy)
+        
+        self.ok.grid(row=1, column=1, sticky='ew')
+        self.cancel.grid(row=1, column=2, sticky='ew')
+        
+    def exit(self):
+        self.base.viewmode = self.selection.get()
+        self.destroy()
+        
+
+def scaling():
+    """
+    Windows taskbar is 40px default
+    """
+    # doing some quickmaths 
+    pass
 
 
 def main():
+    for monitor in EnumDisplayMonitors():
+        info = GetMonitorInfo(monitor[0])
+        if info['Flags'] == 1:
+            break
+
     root = tk.Tk()
-    gui = MainUI(root)
+    gui = MainUI(root, info['Work'][2:])
     root.mainloop()
 
 
