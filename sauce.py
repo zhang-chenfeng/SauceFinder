@@ -29,6 +29,7 @@ from bs4 import BeautifulSoup
 from win32api import EnumDisplayMonitors, GetMonitorInfo
 
 
+
 class MainUI(tk.Frame):
     def __init__(self, root, dimensions):
         tk.Frame.__init__(self, root)
@@ -39,7 +40,7 @@ class MainUI(tk.Frame):
         self.memory = {}
         self.sauce_data = (1, 1, 1, 22, 22, 1, 222, "")
         self.baseUI()
-        self.viewmode = 'scale'
+        self.viewmode = 'scaled'
 
 
     def baseUI(self):
@@ -235,7 +236,7 @@ class MainUI(tk.Frame):
 
 
     def viewBook(self):
-        Viewer(self.root, self, (self.magic_number, self.sauce_data[4], self.sauce_data[6]), self.memory)
+        Viewer(self.root, self)
 
     
     def viewSettings(self):
@@ -244,26 +245,29 @@ class MainUI(tk.Frame):
     
     def offlineTesting(self):
         self.loadStart("test")
-        self.sauce_data = ("kurashina", "asuka", ImageTk.PhotoImage(Image.open("untitled.png").resize((350, 511), Image.ANTIALIAS)), [("wow", ("this", "is", "legal?"))], 5, "time", 1, "http://softloli.moe")
+        self.sauce_data = ("offline testing", "wow is this legal?", ImageTk.PhotoImage(Image.open("untitled.png").resize((350, 511), Image.ANTIALIAS)), [("Parodies", ("Aokana",)), ("Characters", ("Kurashina Asuka",)), ("Tags", ("lolicon", "flying fish"))], 5, "time", 1, "http://softloli.moe")
         self.loadDone()
         self.renderPreview()
         
         
-    
+# all the code from here on down is a complete mess. not that the code above is clean, just after this it gets even worse
 class Viewer(tk.Toplevel):
-    def __init__(self, root, base, book_data, memory):
+    def __init__(self, root, base):
         tk.Toplevel.__init__(self, base)
-        self.sauce, self.pages, self.gallery = book_data # self.sauce is currently useless
         self.root = root
         self.base = base
-        self.memory = memory
+        self.pages = self.base.sauce_data[4]
+        self.gallery = self.base.sauce_data[6]
         self.curr_page = 1
         self.pressed = False
         self.loading = False
         self.q = queue.Queue()
         self.xpad, self.ypad = 20, 20
+        
+        # this is so fucking jank I should just make them both classes with their own render method 
+        self.modes = {'scaled': {'base': self.scaleView, 'render': self.scaleRender}, 'scrolled': {'base': self.scrollView, 'render': self.scrollRender}}
         self.UI()
-        self.scaleView() # temppp
+        self.modes[self.base.viewmode]['base']()
         self.loadPage()
         
     
@@ -296,40 +300,66 @@ class Viewer(tk.Toplevel):
         self.img_l.grid()
         
     
-    def scrollView(self):
-        pass
+    def scaleRender(self):
+        self.img_display = ImageTk.PhotoImage(self.base.memory[self.curr_page].resize((self.img_w, self.img_h), Image.ANTIALIAS))
+        self.img_l['image'] = self.img_display
     
+    
+    def scrollView(self):
+        win_h = self.base.height - 32
+        self.img_h = win_h - 2 * self.ypad
+        
+        self.screen = tk.Canvas(self.display_f, width=1080, height=win_h-2*self.ypad)
+        self.bar = tk.Scrollbar(self.display_f, orient='vertical', command=self.screen.yview)
+        self.screen.configure(yscrollcommand=self.bar.set)
+        
+        self.screen.grid(row=0, column=0)
+        self.bar.grid(row=0, column=1, sticky='ns')
+        
+        self.bind("<MouseWheel>", self.scroll)
 
+
+    def scrollRender(self):
+        self.img_display = ImageTk.PhotoImage(self.base.memory[self.curr_page])
+        self.screen.create_image(0, 0, image=self.img_display, anchor='nw')
+        self.screen.configure(scrollregion=self.screen.bbox('all'))
+        self.screen.yview_moveto(0)
+        
+
+    def scroll(self, event):
+        if event.state == 0:
+            self.screen.yview_scroll(int(-1 * (event.delta / 120)), 'units')
+    
+    
     def renderPage(self):
-        self.img_l['image'] = self.memory[self.curr_page]
-        print(self.memory[self.curr_page])
+        self.img_l['image'] = self.base.memory[self.curr_page]
+        print(self.base.memory[self.curr_page])
 
 
     def loadPage(self):
         self.loading = True
         try:
-            image = self.memory[self.curr_page]
+            image = self.base.memory[self.curr_page]
             print("Already loaded")
             self.q.put(0)
         except KeyError:
             
             # offline testing
             if self.base.magic_number == "test":
-                self.memory[self.curr_page] = ImageTk.PhotoImage(Image.open("u" + str(self.curr_page) + ".png").resize((self.img_w, self.img_h), Image.ANTIALIAS))
+                self.base.memory[self.curr_page] = Image.open("u" + str(self.curr_page) + ".png")
                 print("load testing image")
                 self.q.put(0)
-                self.loading = False
             
             else:
                 print("image download")
-                Thread(target=self.downloadImage, args=(self.gallery, self.curr_page, self.q, self.memory)).start()
+                Thread(target=self.downloadImage, args=(self.gallery, self.curr_page, self.q, self.base.memory)).start()
         self.waitImage()
         
 
     def waitImage(self):
         try:
             response = self.q.get(False)
-            self.renderPage()
+            self.modes[self.base.viewmode]['render']()
             self.loading = False
         except queue.Empty:
             self.root.after(100, self.waitImage)
@@ -351,17 +381,17 @@ class Viewer(tk.Toplevel):
     def nextPage(self, event):
         print("next")
         if not self.pressed and not self.loading and self.curr_page < self.pages:
+            self.pressed = True
             self.curr_page += 1    
             self.loadPage()
-            self.pressed = True
 
 
     def prevPage(self, event):
         print("prev")
         if not self.pressed and not self.loading and self.curr_page > 1:
+            self.pressed = True
             self.curr_page -= 1
             self.loadPage()
-            self.pressed = True
 
 
     def resetPress(self, event):
@@ -380,7 +410,7 @@ class Settings(tk.Toplevel):
         self.base = base
         self.view_options = ""
         self.selection = tk.StringVar()
-        self.selection.set("scaled")
+        self.selection.set(self.base.viewmode)
         self.UI()
 
         
@@ -404,14 +434,6 @@ class Settings(tk.Toplevel):
     def exit(self):
         self.base.viewmode = self.selection.get()
         self.destroy()
-        
-
-def scaling():
-    """
-    Windows taskbar is 40px default
-    """
-    # doing some quickmaths 
-    pass
 
 
 def main():
