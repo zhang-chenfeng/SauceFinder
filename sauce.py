@@ -38,7 +38,7 @@ class MainUI(tk.Frame):
         self.q = queue.Queue()
         self.magic_number = 0
         self.memory = {}
-        self.sauce_data = (1, 1, 1, 22, 22, 1, 222, "")
+        self.sauce_data = ()
         self.baseUI()
         f = open("config.txt", "r")
         self.viewmode = f.read()
@@ -143,14 +143,14 @@ class MainUI(tk.Frame):
             itm.destroy()
 
     # Future loading events go in here
-    def loadStart(self, magic_number):
+    def loadStart(self):
         self.search['state'] = 'disabled'
         self.title_l['text'] = "Loading..."
         self.subtitle_l['text'] = "正在加载。。。"
         self.destroyChildren(self.fields_f)
         self.cover_l['image'] = self.img_tmp
         self.options_f.grid_forget()
-        print("data fetch started for {}".format(magic_number))
+        print("data fetch started for {}".format(self.magic_number))
         self.time_track = time.time()
 
     # and here
@@ -173,7 +173,7 @@ class MainUI(tk.Frame):
             return
         
         if self.magic_number.isdigit():
-            self.loadStart(self.magic_number)
+            self.loadStart()
             Thread(target=self.getValues, args=(self.q, self.magic_number)).start()
             self.root.after(100, self.awaitSauce)
         else:
@@ -250,14 +250,14 @@ class MainUI(tk.Frame):
     
     
     def offlineTesting(self):
-        self.loadStart("test")
+        self.loadStart()
         self.sauce_data = ("offline testing", "wow is this legal?", ImageTk.PhotoImage(Image.open("untitled.png").resize((350, 511), Image.ANTIALIAS)), [("Parodies", ("Aokana",)), ("Characters", ("Kurashina Asuka",)), ("Tags", ("lolicon", "flying fish"))], 5, "time", 1, "http://softloli.moe")
         self.memory[1] = Image.open("u1.png")
         self.loadDone()
         self.renderPreview()
     
     
-    def destroy(self):
+    def destroy(self): # write settings to file upon exit
         x = open("config.txt", "w")
         x.write(self.viewmode)
         x.close()
@@ -388,18 +388,15 @@ class Viewer(tk.Toplevel):
 class Scale(tk.Frame):
     def __init__(self, base):
         tk.Frame.__init__(self, base)
-        self.base = base
-        ratio = self.base.img_w / self.base.img_h
 
-        self.scaled_height = self.base.win_h - sum(self.base.ypad)
+        ratio = base.img_w / base.img_h
+
+        self.scaled_height = base.win_h - sum(base.ypad)
         self.scaled_width = int(self.scaled_height * ratio)
-        win_w = self.scaled_width + sum(self.base.xpad)
+        win_w = self.scaled_width + sum(base.xpad)
         
-        self.base.geometry("{}x{}+{}+0".format(win_w, self.base.win_h, (self.base.base.width - win_w) // 2))
-        self.base.update_idletasks() # required for whatever reason
-
-        self.img_l = tk.Label(self)
-        self.img_l.grid()
+        base.geometry("{}x{}+{}+0".format(win_w, base.win_h, (base.base.width - win_w) // 2)) # base.base- thats not confusing at all
+        base.update_idletasks() # required for whatever reason
 
         self.img_l = tk.Label(self)
         self.img_l.grid()
@@ -414,22 +411,21 @@ class Scale(tk.Frame):
 class Scroll(tk.Frame):
     def __init__(self, base):
         tk.Frame.__init__(self, base)
-        self.base = base
         
-        win_w = self.base.img_w + sum(self.base.xpad)
-        screen_height = self.base.win_h - sum(self.base.ypad)
+        win_w = base.img_w + sum(base.xpad)
+        screen_height = base.win_h - sum(base.ypad)
         
-        self.base.geometry("{}x{}+{}+0".format(win_w, self.base.win_h, (self.base.base.width - win_w) // 2))
-        self.base.update_idletasks()
+        base.geometry("{}x{}+{}+0".format(win_w, base.win_h, (base.base.width - win_w) // 2))
+        base.update_idletasks()
         
-        self.screen = tk.Canvas(self, width=self.base.img_w, height=screen_height)
+        self.screen = tk.Canvas(self, width=base.img_w, height=screen_height)
         self.bar = tk.Scrollbar(self, orient='vertical', command=self.screen.yview)
         self.screen.configure(yscrollcommand=self.bar.set)
         
         self.screen.grid(row=0, column=0)
         self.bar.grid(row=0, column=1, sticky='ns')
         
-        self.base.bind("<MouseWheel>", self.scroll)
+        base.bind("<MouseWheel>", self.scroll)
     
 
     def render(self, image):
@@ -449,7 +445,6 @@ class Settings(tk.Toplevel):
     def __init__(self, base):
         tk.Toplevel.__init__(self, base)
         self.base = base
-        self.view_options = ""
         self.selection = tk.StringVar()
         self.selection.set(self.base.viewmode)
         self.UI()
