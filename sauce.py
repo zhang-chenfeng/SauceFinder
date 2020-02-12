@@ -179,6 +179,9 @@ class MainUI(tk.Frame):
         else:
             self.title_l['text'] = "invalid number"
             self.subtitle_l['text'] = "无效号码"
+            self.destroyChildren(self.fields_f)
+            self.cover_l['image'] = self.img_tmp
+            self.options_f.grid_forget()
 
 
     def awaitSauce(self):
@@ -352,14 +355,11 @@ class Viewer(tk.Toplevel):
 
     
     def downloadImage(self, gallery, page, q, mem):
-        print("inthread")
+        print("thread started- fetching image")
         url = "".join(("https://i.nhentai.net/galleries/", str(gallery), "/", str(page), ".jpg"))
         load = Image.open(BytesIO(get(url).content))
         print("got image")
-        load = load.resize((516, 740), Image.ANTIALIAS)
-        print("resized")
-        image = ImageTk.PhotoImage(load)
-        mem[page] = image
+        mem[page] = load
         q.put(0)
         print("thread done")
 
