@@ -271,16 +271,15 @@ class Viewer(tk.Toplevel):
         self.ypad = (10, 30)
         
         self.curr_page = 1
-                
+        
+        self.views = {'scaled': Scale, 'scrolled': Scroll}        
+        
         self.pressed = False
         self.loading = False
         
         self.q = queue.Queue()
         
         self.UI()
-        self.views = {'scaled': Scale, 'scrolled': Scroll}
-        self.viewframe = self.views[self.base.viewmode](self)
-        self.viewframe.pack(padx=self.xpad, pady=self.ypad)
         self.loadPage()
 
 
@@ -289,8 +288,8 @@ class Viewer(tk.Toplevel):
         self.focus() # give keyboard focus to the toplevel object(for key bindings)
         self.grab_set() # prevent interaction with main window while viewer is open
         
-        self.display_f = tk.Frame(self)
-        # self.display_f.pack(padx=(self.xpad, self.xpad), pady=(self.ypad, self.ypad))
+        self.viewframe = self.views[self.base.viewmode](self)
+        self.viewframe.pack(padx=self.xpad, pady=self.ypad)
         
         self.bind('<Left>', self.prevPage)
         self.bind('<Right>', self.nextPage)
