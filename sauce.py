@@ -40,7 +40,9 @@ class MainUI(tk.Frame):
         self.memory = {}
         self.sauce_data = (1, 1, 1, 22, 22, 1, 222, "")
         self.baseUI()
-        self.viewmode = 'scaled'
+        f = open("config.txt", "r")
+        self.viewmode = f.read()
+        f.close()
 
 
     def baseUI(self):
@@ -253,6 +255,14 @@ class MainUI(tk.Frame):
         self.memory[1] = Image.open("u1.png")
         self.loadDone()
         self.renderPreview()
+    
+    
+    def destroy(self):
+        x = open("config.txt", "w")
+        x.write(self.viewmode)
+        x.close()
+        
+        tk.Frame.destroy(self)
         
         
 # all the code from here on down is a complete mess. not that the code above is clean, just after this it gets even worse
