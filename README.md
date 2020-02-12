@@ -15,4 +15,4 @@ This program will accept your 6 digit number(s) and generate a preview correspon
 - [x] probably some sort of input validation but anything wrong should just return 404
 - [ ] some sort of catch for connection timeout so it doesn't hang forever
 - [ ] add clicking support of the viewer
-- [ ] image downloading in background
+- [x] image downloading in background

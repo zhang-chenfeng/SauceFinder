@@ -9,6 +9,7 @@
 #  - BeautifulSoup4
 #  - Requests v2.2 or any version probably
 #  - Pillow v7.0 or anything really
+#  - pywin32 whatever version is on PyPI right now
 #
 #  created in Python 3.7.4 but there's no reason why it wouldn't work on any version
 #  that isn't something ridiculous
@@ -25,17 +26,23 @@ from threading import Thread
 from PIL import Image, ImageTk
 from requests import get
 from bs4 import BeautifulSoup
+from win32api import EnumDisplayMonitors, GetMonitorInfo
+
 
 
 class MainUI(tk.Frame):
-    def __init__(self, root):
+    def __init__(self, root, dimensions):
         tk.Frame.__init__(self, root)
         self.root = root
+        self.width, self.height, = dimensions
         self.q = queue.Queue()
         self.magic_number = 0
         self.memory = {}
-        self.sauce_data = (1, 1, 1, 22, 22, 1, 222, "")
+        self.sauce_data = ()
         self.baseUI()
+        f = open("config.txt", "r")
+        self.viewmode = f.read()
+        f.close()
 
 
     def baseUI(self):
@@ -45,12 +52,19 @@ class MainUI(tk.Frame):
         # header
         self.header = tk.Label(self.root, width=80, text="Sauce Finder", font=(None, 15))
         
+        # 2nd line frame
+        self.sub_f = tk.Frame(self.root, bg='red')
+        
         # input frame
-        self.input_f = tk.Frame(self.root)
+        self.input_f = tk.Frame(self.sub_f)
         self.prompt = tk.Label(self.input_f, text="Enter Sauce:")
         self.entry = tk.Entry(self.input_f, width=10)
         self.entry.bind("<FocusIn>", lambda event: self.entry.selection_range(0, tk.END))
+        self.entry.bind("<Return>", lambda event: self.fetchSauce())
         self.search = tk.Button(self.input_f, text="GO", command=self.fetchSauce)
+        
+        # settings
+        self.settings_b = tk.Button(self.sub_f, text="settings", command=self.viewSettings)
         
         # sub headers
         self.title_l = tk.Label(self.root, text=" ", font=(None, 14), wraplength=875)
@@ -74,10 +88,14 @@ class MainUI(tk.Frame):
         
         self.header.grid(row=0, column=0, padx=(30, 30), pady=(15, 10))
         
-        self.input_f.grid(row=1, column=0)
+        self.sub_f.grid(row=1, column=0, padx=(30, 30), sticky="ew")
+        
+        self.input_f.grid(row=0, column=0, padx=(300, 300))
         self.prompt.grid(row=0, column=0, padx=(5, 2))
         self.entry.grid(row=0, column=1, padx=(2, 2))
         self.search.grid(row=0, column=2, padx=(2, 5))
+        
+        self.settings_b.grid(row=0, column=1, sticky="e")
         
         self.title_l.grid(row=2, column=0, padx=(30, 30), pady=(15, 2), sticky=tk.E+tk.W)
         self.subtitle_l.grid(row=3, column=0, padx=(30, 30), pady=(5, 10), sticky=tk.E+tk.W)
@@ -125,20 +143,20 @@ class MainUI(tk.Frame):
             itm.destroy()
 
     # Future loading events go in here
-    def loadStart(self, magic_number):
+    def loadStart(self):
         self.search['state'] = 'disabled'
         self.title_l['text'] = "Loading..."
         self.subtitle_l['text'] = "正在加载。。。"
         self.destroyChildren(self.fields_f)
         self.cover_l['image'] = self.img_tmp
         self.options_f.grid_forget()
-        print("data fetch started for %s" %magic_number)
+        print("data fetch started for {}".format(self.magic_number))
         self.time_track = time.time()
 
     # and here
     def loadDone(self):
         end_time = time.time()
-        print("response received %fs elapsed" %(end_time-self.time_track))
+        print("response received {}s elapsed".format(end_time-self.time_track))
         self.search['state'] = 'normal'
 
 
@@ -148,13 +166,22 @@ class MainUI(tk.Frame):
         self.header.focus() # lol this is really fucking stupid but I can't think of a better way to do this
         
         self.magic_number = self.entry.get()
+        
+        # for offline testing
+        if self.magic_number == "test":
+            self.offlineTesting()
+            return
+        
         if self.magic_number.isdigit():
-            self.loadStart(self.magic_number)
+            self.loadStart()
             Thread(target=self.getValues, args=(self.q, self.magic_number)).start()
             self.root.after(100, self.awaitSauce)
         else:
             self.title_l['text'] = "invalid number"
             self.subtitle_l['text'] = "无效号码"
+            self.destroyChildren(self.fields_f)
+            self.cover_l['image'] = self.img_tmp
+            self.options_f.grid_forget()
 
 
     def awaitSauce(self):
@@ -210,48 +237,72 @@ class MainUI(tk.Frame):
         
         # get upload time
         upload_time = info.find('time').text
+        
+        # get first page of book
+        self.memory[1] = Image.open(BytesIO(get("".join(("https://i.nhentai.net/galleries/", str(gallery), "/1.jpg"))).content))
 
         q.put((title, subtitle, cover, fields, pages, upload_time, gallery, url))
 
 
     def viewBook(self):
-        Viewer(self.root, (self.magic_number, self.sauce_data[4], self.sauce_data[6]), self.memory)
+        Viewer(self)
 
-
+    
+    def viewSettings(self):
+        Settings(self)
+    
+    
+    def offlineTesting(self):
+        self.loadStart()
+        self.sauce_data = ("offline testing", "wow is this legal?", ImageTk.PhotoImage(Image.open("untitled.png").resize((350, 511), Image.ANTIALIAS)), [("Parodies", ("Aokana",)), ("Characters", ("Kurashina Asuka",)), ("Tags", ("lolicon", "flying fish"))], 5, "time", 1, "http://softloli.moe")
+        self.memory[1] = Image.open("u1.png")
+        self.loadDone()
+        self.renderPreview()
+    
+    
+    def destroy(self): # write settings to file upon exit
+        x = open("config.txt", "w")
+        x.write(self.viewmode)
+        x.close()
+        
+        tk.Frame.destroy(self)
+        
+        
+# all the code from here on down is a complete mess. not that the code above is clean, just after this it gets even worse
 class Viewer(tk.Toplevel):
-    def __init__(self, base, book_data, memory):
+    def __init__(self, base):
         tk.Toplevel.__init__(self, base)
-        self.sauce, self.pages, self.gallery = book_data # self.sauce is currently useless
+        self.root = base.root
         self.base = base
-        self.memory = memory
+        
+        self.pages = self.base.sauce_data[4]
+        self.gallery = self.base.sauce_data[6]
+        
+        self.img_w, self.img_h = self.base.memory[1].size
+        self.win_h = self.base.height - 32
+        self.xpad = (20, 20)
+        self.ypad = (10, 30)
+        
         self.curr_page = 1
+        
+        self.views = {'scaled': Scale, 'scrolled': Scroll}        
+        
         self.pressed = False
         self.loading = False
+        
         self.q = queue.Queue()
+        
         self.UI()
         self.loadPage()
-        
-    
+
+
     def UI(self):
-        self.img_l = tk.Label(self)
-        
-        self.desc_f = tk.Frame(self)
-        self.index = tk.Label(self.desc_f)
-        self.img_desc = tk.Label(self.desc_f, text=" ".join(("of", str(self.pages))))
-        
-        # self.desc_f['bg'] = 'red'
-        # self.index['bg'] = 'white'
-        # self.img_desc['bg'] = 'beige'
-        
-        
-        self.img_l.grid(row=0, padx=(10, 10), pady=(10, 10))
-        self.desc_f.grid(row=1)
-        self.index.grid(row=0, column=0, sticky=tk.E)
-        self.img_desc.grid(row=0, column=1, sticky=tk.W)
-                
         self.transient(self.base) # popup appears as part of main window(not shown on taskbar)
         self.focus() # give keyboard focus to the toplevel object(for key bindings)
         self.grab_set() # prevent interaction with main window while viewer is open
+        
+        self.viewframe = self.views[self.base.viewmode](self)
+        self.viewframe.pack(padx=self.xpad, pady=self.ypad)
         
         self.bind('<Left>', self.prevPage)
         self.bind('<Right>', self.nextPage)
@@ -261,67 +312,175 @@ class Viewer(tk.Toplevel):
         self.bind('<KeyRelease-Right>', self.resetPress)
 
 
-    def renderPage(self):
-        self.index['text'] = str(self.curr_page)
-        # self.img_l['text'] = self.memory[self.curr_page] # temppp
-        self.img_l['image'] = self.memory[self.curr_page]
-
-
     def loadPage(self):
-        self.loading = True
+        print("call to load page {}".format(self.curr_page))
         try:
-            image = self.memory[self.curr_page]
-            print("Already loaded")
-            self.q.put(0)
-        except KeyError:
-            print("image download")
-            Thread(target=self.downloadImage, args=(self.gallery, self.curr_page, self.q, self.memory)).start()
-        self.waitImage()
-        
+            self.renderPage()
+
+        except KeyError: # Image is still loading need to wait
+            self.loading = True
+            print("load not finished retry in 100ms")
+            self.root.after(100, self.loadPage)
+
+
+    def renderPage(self):
+        print("rendering page {}".format(self.curr_page))
+        self.viewframe.render(self.base.memory[self.curr_page])
+        self.title("".join((self.base.magic_number, "- page ", str(self.curr_page))))
+
+        print("buffering page {}".format(self.curr_page + 1))
+        self.bufferNext()
+
+
+    def bufferNext(self):
+        if self.curr_page < self.pages:
+            try:
+                self.base.memory[self.curr_page + 1]
+                print("page already loaded OK")
+            except KeyError:
+                print("page not loaded downloading")
+                if self.base.magic_number == "test":
+                    self.base.memory[self.curr_page + 1] = Image.open("u" + str(self.curr_page + 1) + ".png")
+                else:
+                    Thread(target=self.downloadImage, args=(self.gallery, self.curr_page + 1, self.q, self.base.memory)).start()  
+                    self.root.after(100, self.waitImage)
+
 
     def waitImage(self):
         try:
             response = self.q.get(False)
-            self.renderPage()
             self.loading = False
         except queue.Empty:
-            self.base.after(100, self.waitImage)
+            self.root.after(100, self.waitImage)
 
     
     def downloadImage(self, gallery, page, q, mem):
-        print("inthread")
+        print("thread started- fetching image")
         url = "".join(("https://i.nhentai.net/galleries/", str(gallery), "/", str(page), ".jpg"))
         load = Image.open(BytesIO(get(url).content))
         print("got image")
-        load = load.resize((516, 740), Image.ANTIALIAS)
-        print("resized")
-        image = ImageTk.PhotoImage(load)
-        mem[page] = image
+        mem[page] = load
         q.put(0)
         print("thread done")
 
 
     def nextPage(self, event):
+        print("next")
         if not self.pressed and not self.loading and self.curr_page < self.pages:
+            self.pressed = True
             self.curr_page += 1    
             self.loadPage()
-            self.pressed = True
 
 
     def prevPage(self, event):
+        print("prev")
         if not self.pressed and not self.loading and self.curr_page > 1:
+            self.pressed = True
             self.curr_page -= 1
             self.loadPage()
-            self.pressed = True
 
 
     def resetPress(self, event):
         self.pressed = False
 
 
+# the 2 classes for rendering the image display- should be self explainatory what they both are
+class Scale(tk.Frame):
+    def __init__(self, base):
+        tk.Frame.__init__(self, base)
+
+        ratio = base.img_w / base.img_h
+
+        self.scaled_height = base.win_h - sum(base.ypad)
+        self.scaled_width = int(self.scaled_height * ratio)
+        win_w = self.scaled_width + sum(base.xpad)
+        
+        base.geometry("{}x{}+{}+0".format(win_w, base.win_h, (base.base.width - win_w) // 2)) # base.base- thats not confusing at all
+        base.update_idletasks() # required for whatever reason
+
+        self.img_l = tk.Label(self)
+        self.img_l.grid()
+    
+    
+    def render(self, image):
+        self.img_display = ImageTk.PhotoImage(image.resize((self.scaled_width, self.scaled_height), Image.ANTIALIAS))
+        self.img_l['image'] = self.img_display
+
+
+
+class Scroll(tk.Frame):
+    def __init__(self, base):
+        tk.Frame.__init__(self, base)
+        
+        win_w = base.img_w + sum(base.xpad)
+        screen_height = base.win_h - sum(base.ypad)
+        
+        base.geometry("{}x{}+{}+0".format(win_w, base.win_h, (base.base.width - win_w) // 2))
+        base.update_idletasks()
+        
+        self.screen = tk.Canvas(self, width=base.img_w, height=screen_height)
+        self.bar = tk.Scrollbar(self, orient='vertical', command=self.screen.yview)
+        self.screen.configure(yscrollcommand=self.bar.set)
+        
+        self.screen.grid(row=0, column=0)
+        self.bar.grid(row=0, column=1, sticky='ns')
+        
+        base.bind("<MouseWheel>", self.scroll)
+    
+
+    def render(self, image):
+        self.img_display = ImageTk.PhotoImage(image)
+        self.screen.create_image(0, 0, image=self.img_display, anchor='nw')
+        self.screen.configure(scrollregion=self.screen.bbox('all'))
+        self.screen.yview_moveto(0)
+        
+        
+    def scroll(self, event):
+        if event.state == 0:
+            self.screen.yview_scroll(int(-1 * (event.delta / 120)), 'units')
+
+
+# class for the settings tab. Im thinking to just integrate this into the base UI
+class Settings(tk.Toplevel):
+    def __init__(self, base):
+        tk.Toplevel.__init__(self, base)
+        self.base = base
+        self.selection = tk.StringVar()
+        self.selection.set(self.base.viewmode)
+        self.UI()
+
+        
+    def UI(self):
+        self.transient(self.base)
+        self.grab_set()
+        self.focus()
+        
+        self.l = tk.Label(self, text="viewer mode")
+        self.l.grid(row=0, column=0)
+        
+        tk.Radiobutton(self, text="scaled", variable=self.selection, value="scaled").grid(row=0, column=1)
+        tk.Radiobutton(self, text="scrolled", variable=self.selection, value="scrolled").grid(row=0, column=2)
+        
+        self.ok = tk.Button(self, text="ok", command=self.exit)
+        self.cancel = tk.Button(self, text="cancel", command=self.destroy)
+        
+        self.ok.grid(row=1, column=1, sticky='ew')
+        self.cancel.grid(row=1, column=2, sticky='ew')
+        
+        
+    def exit(self):
+        self.base.viewmode = self.selection.get()
+        self.destroy()
+
+
 def main():
+    for monitor in EnumDisplayMonitors():
+        info = GetMonitorInfo(monitor[0])
+        if info['Flags'] == 1:
+            break
+
     root = tk.Tk()
-    gui = MainUI(root)
+    gui = MainUI(root, info['Work'][2:])
     root.mainloop()
 
 
