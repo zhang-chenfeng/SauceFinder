@@ -374,7 +374,7 @@ class Viewer(tk.Toplevel):
         self.pressed = False
 
 
-
+# the 2 classes for rendering the image display- should be self explainatory what they both are
 class Scale(tk.Frame):
     def __init__(self, base):
         tk.Frame.__init__(self, base)
@@ -434,7 +434,7 @@ class Scroll(tk.Frame):
             self.screen.yview_scroll(int(-1 * (event.delta / 120)), 'units')
 
 
-
+# class for the settings tab. Im thinking to just integrate this into the base UI
 class Settings(tk.Toplevel):
     def __init__(self, base):
         tk.Toplevel.__init__(self, base)
