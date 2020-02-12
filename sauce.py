@@ -231,12 +231,15 @@ class MainUI(tk.Frame):
         
         # get upload time
         upload_time = info.find('time').text
+        
+        # get first page of book
+        self.memory[1] = Image.open(BytesIO(get("".join(("https://i.nhentai.net/galleries/", str(gallery), "/1.jpg"))).content))
 
         q.put((title, subtitle, cover, fields, pages, upload_time, gallery, url))
 
 
     def viewBook(self):
-        Viewer(self.root, self)
+        Viewer(self)
 
     
     def viewSettings(self):
@@ -246,28 +249,30 @@ class MainUI(tk.Frame):
     def offlineTesting(self):
         self.loadStart("test")
         self.sauce_data = ("offline testing", "wow is this legal?", ImageTk.PhotoImage(Image.open("untitled.png").resize((350, 511), Image.ANTIALIAS)), [("Parodies", ("Aokana",)), ("Characters", ("Kurashina Asuka",)), ("Tags", ("lolicon", "flying fish"))], 5, "time", 1, "http://softloli.moe")
+        self.memory[1] = Image.open("u1.png")
         self.loadDone()
         self.renderPreview()
         
         
 # all the code from here on down is a complete mess. not that the code above is clean, just after this it gets even worse
 class Viewer(tk.Toplevel):
-    def __init__(self, root, base):
+    def __init__(self, base):
         tk.Toplevel.__init__(self, base)
-        self.root = root
+        self.root = base.root
         self.base = base
         self.pages = self.base.sauce_data[4]
         self.gallery = self.base.sauce_data[6]
         self.curr_page = 1
+        self.win_h = self.base.height - 32
         self.pressed = False
         self.loading = False
         self.q = queue.Queue()
         self.xpad, self.ypad = 20, 20
         
-        # this is so fucking jank I should just make them both classes with their own render method 
-        self.modes = {'scaled': {'base': self.scaleView, 'render': self.scaleRender}, 'scrolled': {'base': self.scrollView, 'render': self.scrollRender}}
+        self.views = {'scaled': Scale, 'scrolled': Scroll}
         self.UI()
-        self.modes[self.base.viewmode]['base']()
+        self.viewframe = self.views[self.base.viewmode](self)
+        print(self.base.memory)
         self.loadPage()
         
     
@@ -277,7 +282,7 @@ class Viewer(tk.Toplevel):
         self.grab_set() # prevent interaction with main window while viewer is open
         
         self.display_f = tk.Frame(self)
-        self.display_f.pack(padx=(self.xpad, self.xpad), pady=(self.ypad, self.ypad))
+        # self.display_f.pack(padx=(self.xpad, self.xpad), pady=(self.ypad, self.ypad))
         
         self.bind('<Left>', self.prevPage)
         self.bind('<Right>', self.nextPage)
@@ -286,24 +291,6 @@ class Viewer(tk.Toplevel):
         self.bind('<KeyRelease-Left>', self.resetPress)
         self.bind('<KeyRelease-Right>', self.resetPress)
 
-
-    def scaleView(self):
-        win_h = self.base.height - 32 # 26px header + 2 * 3px border
-        self.img_h = win_h - 2 * self.ypad
-        self.img_w = int(self.img_h * 0.6968)
-        win_w = self.img_w + 2 * self.xpad
-        
-        self.geometry("{}x{}+{}+0".format(self.img_w, win_h, (self.base.width - self.img_w) // 2))
-        self.update_idletasks() # required for whatever reason
-
-        self.img_l = tk.Label(self.display_f)
-        self.img_l.grid()
-        
-    
-    def scaleRender(self):
-        self.img_display = ImageTk.PhotoImage(self.base.memory[self.curr_page].resize((self.img_w, self.img_h), Image.ANTIALIAS))
-        self.img_l['image'] = self.img_display
-    
     
     def scrollView(self):
         win_h = self.base.height - 32
@@ -332,18 +319,29 @@ class Viewer(tk.Toplevel):
     
     
     def renderPage(self):
-        self.img_l['image'] = self.base.memory[self.curr_page]
-        print(self.base.memory[self.curr_page])
+        print("rendering page {}".format(self.curr_page))
+        self.viewframe.render(self.base.memory[self.curr_page])
+        print("buffering page {}".format(self.curr_page + 1))
+        self.bufferNext()
 
 
     def loadPage(self):
+        print("call to load page {}".format(self.curr_page))
+        try:
+            self.renderPage()
+
+        except KeyError: # Image is still loading need to wait
+            print("load not finished retry in 100ms")
+            self.root.after(100, self.loadPage)
+
+
+    def loadPageold(self):
         self.loading = True
         try:
             image = self.base.memory[self.curr_page]
             print("Already loaded")
             self.q.put(0)
         except KeyError:
-            
             # offline testing
             if self.base.magic_number == "test":
                 self.base.memory[self.curr_page] = Image.open("u" + str(self.curr_page) + ".png")
@@ -355,11 +353,24 @@ class Viewer(tk.Toplevel):
                 Thread(target=self.downloadImage, args=(self.gallery, self.curr_page, self.q, self.base.memory)).start()
         self.waitImage()
         
+        
+    def bufferNext(self):
+        if self.curr_page < self.pages:
+            try:
+                self.base.memory[self.curr_page + 1]
+                print("page already loaded OK")
+            except KeyError:
+                print("page not loaded downloading")
+                if self.base.magic_number == "test":
+                    self.base.memory[self.curr_page + 1] = Image.open("u" + str(self.curr_page + 1) + ".png")
+                else:
+                    Thread(target=self.downloadImage, args=(self.gallery, self.curr_page + 1, self.q, self.base.memory)).start()  
+                    self.root.after(100, self.waitImage)
+
 
     def waitImage(self):
         try:
             response = self.q.get(False)
-            self.modes[self.base.viewmode]['render']()
             self.loading = False
         except queue.Empty:
             self.root.after(100, self.waitImage)
@@ -404,6 +415,39 @@ class Viewer(tk.Toplevel):
 
 
 
+class Scale(tk.Frame):
+    def __init__(self, base):
+        tk.Frame.__init__(self, base)
+        self.base = base
+        self.img_h = self.base.win_h - 2 * self.base.ypad
+        self.img_w = int(self.img_h * 0.6968)
+        win_w = self.img_w + 2 * self.base.xpad
+        
+        self.base.geometry("{}x{}+{}+0".format(self.img_w, self.base.win_h, (self.base.base.width - self.img_w) // 2))
+        self.base.update_idletasks() # required for whatever reason
+
+        self.img_l = tk.Label(self)
+        self.img_l.grid()
+        
+        self.pack()
+        self.img_l = tk.Label(self)
+        self.img_l.grid()
+    
+    
+    def render(self, image):
+        self.img_display = ImageTk.PhotoImage(image.resize((self.img_w, self.img_h), Image.ANTIALIAS))
+        self.img_l['image'] = self.img_display
+
+
+
+class Scroll(tk.Frame):
+    def __init__(self, base):
+        tk.Frame.__init__(self, base)
+
+
+
+
+
 class Settings(tk.Toplevel):
     def __init__(self, base):
         tk.Toplevel.__init__(self, base)
@@ -430,6 +474,7 @@ class Settings(tk.Toplevel):
         
         self.ok.grid(row=1, column=1, sticky='ew')
         self.cancel.grid(row=1, column=2, sticky='ew')
+        
         
     def exit(self):
         self.base.viewmode = self.selection.get()
