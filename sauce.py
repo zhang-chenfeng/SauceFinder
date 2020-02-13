@@ -303,7 +303,7 @@ class MainUI(tk.Frame):
     # testing stuff ignore
     def offlineTesting(self):
         self.loadStart()
-        self.sauce_data = ("offline testing", "wow is this legal?", ImageTk.PhotoImage(Image.open("untitled.png").resize((350, 511), Image.ANTIALIAS)), [("Parodies", ("Aokana",)), ("Characters", ("Kurashina Asuka",)), ("Tags", ("lolicon", "flying fish"))], 5, "time", 1, "http://softloli.moe")
+        self.sauce_data = ("offline testing", "wow is this legal?", ImageTk.PhotoImage(Image.open("untitled.png").resize((350, 511), Image.ANTIALIAS)), [("Parodies", ("Aokana",)), ("Characters", ("Kurashina Asuka",)), ("Tags", ("lolicon", "flying fish"))], 5, "time", 1, "http://softloli.moe", "png")
         self.memory[1] = Image.open("u1.png")
         self.loadDone()
         self.renderPreview()
@@ -367,7 +367,7 @@ class Viewer(tk.Toplevel):
 
 
     def UI(self):
-        self.transient(self.base) # popup appears as part of main window(not shown on taskbar)
+        # self.transient(self.base) # popup appears as part of main window(not shown on taskbar)
         self.focus() # give keyboard focus to the toplevel object(for key bindings)
         self.grab_set() # prevent interaction with main window while viewer is open
         
