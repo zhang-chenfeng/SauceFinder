@@ -17,3 +17,15 @@ This program will accept your 6 digit number(s) and generate a preview correspon
 - [ ] add clicking support of the viewer
 - [x] image downloading in backgrounds
 - [ ] put comments so people can actually read my spageti
+
+### Installation
+In case you are braindead:
+1. `git clone https://github.com/zhang-chenfeng/SauceFinder.git saucefinder`
+2. `cd saucefinder`
+3. `py -m venv env`
+4. `env\Scripts\activate`
+5. `python -m pip install -r requirements.txt`
+6. `python sauce.py`
+
+### Features
+~ Coming Soon ~
