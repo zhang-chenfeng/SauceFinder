@@ -130,7 +130,7 @@ class MainUI(tk.Frame):
 
     def renderPreview(self):
         if self.sauce_data:        
-            title, subtitle, cover, fields, pages, upload_time, gallery, url = self.sauce_data
+            title, subtitle, cover, fields, pages, upload_time, gallery, url, self.file_ending = self.sauce_data
             
             # page count and upload date are rendered same as fields in this view
             fields.append(("Pages", [str(pages)]))
@@ -261,8 +261,11 @@ class MainUI(tk.Frame):
         # get image preview
         cover_container = page.find('div', id='cover')
         img_url = cover_container.find('img')['data-src']
-        gallery = int(img_url.split("/")[-2]) # not the be confused with the gallery in the url
-
+        split = img_url.split("/")
+        gallery = split[-2] # not the be confused with the gallery in the url
+        file_ending = split[-1].split(".")[-1] # for whatever reason the file types are not consistent
+        print(file_ending)
+        
         # get image and load
         response = get(img_url)
         load = Image.open(BytesIO(response.content))
@@ -282,9 +285,9 @@ class MainUI(tk.Frame):
         upload_time = info.find('time').text
         
         # get first image of book
-        self.memory[1] = Image.open(BytesIO(get("".join(("https://i.nhentai.net/galleries/", str(gallery), "/1.jpg"))).content))
+        self.memory[1] = Image.open(BytesIO(get("".join(("https://i.nhentai.net/galleries/", str(gallery), "/1.", file_ending))).content))
 
-        q.put((title, subtitle, cover, fields, pages, upload_time, gallery, url))
+        q.put((title, subtitle, cover, fields, pages, upload_time, gallery, url, file_ending))
 
 
     def viewBook(self):
@@ -304,8 +307,8 @@ class MainUI(tk.Frame):
         self.memory[1] = Image.open("u1.png")
         self.loadDone()
         self.renderPreview()
-    
-    
+
+
     def destroy(self): # write settings to file upon exit
         """
         override destroy method to save settings to file when gui is exited
@@ -444,7 +447,7 @@ class Viewer(tk.Toplevel):
         to be run with Thread
         """
         print("thread started- fetching image")
-        url = "".join(("https://i.nhentai.net/galleries/", str(gallery), "/", str(page), ".jpg"))
+        url = "".join(("https://i.nhentai.net/galleries/", str(gallery), "/", str(page), ".", self.base.file_ending))
         load = Image.open(BytesIO(get(url).content))
         print("got image")
         mem[page] = load
@@ -572,7 +575,7 @@ class Settings(tk.Toplevel):
         self.selection.set(self.base.viewmode)
         self.UI()
 
-        
+
     def UI(self):
         self.transient(self.base) # usual stuff
         self.grab_set()
