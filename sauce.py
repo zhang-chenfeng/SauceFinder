@@ -34,6 +34,9 @@ from win32api import EnumDisplayMonitors, GetMonitorInfo
 
 
 class MainUI(tk.Frame):
+    """
+    defines the main window
+    """
     def __init__(self, root, dimensions):
         tk.Frame.__init__(self, root)
         self.root = root
@@ -154,15 +157,21 @@ class MainUI(tk.Frame):
 
 
     def destroyChildren(self, frame):
+        """
+        permanently delete all the items spawned inside a widget
+        """
         for itm in frame.winfo_children():
             itm.destroy()
 
     # Future loading events go in here
     def loadStart(self):
+        """
+        procedures to be run when preview loading begins
+        """
         self.search['state'] = 'disabled'
         self.title_l['text'] = "Loading..."
         self.subtitle_l['text'] = "正在加载。。。"
-        self.destroyChildren(self.fields_f)
+        self.destroyChildren(self.fields_f) # destroy any tags rendered from previous previews
         self.cover_l['image'] = self.img_tmp
         self.options_f.grid_forget()
         print("data fetch started for {}".format(self.magic_number))
@@ -170,14 +179,20 @@ class MainUI(tk.Frame):
 
     # and here
     def loadDone(self):
+        """
+        procedures to be run when preview loading ends
+        """
         end_time = time.time()
         print("response received {}s elapsed".format(end_time-self.time_track))
         self.search['state'] = 'normal'
 
 
     def fetchSauce(self):
+        """
+        run when user clicks go/enter key, starts the thread with fetch process and starts waiting for response
+        """
         # focus an arbitrary label to remove focus from the entry field so the onfocus event to highlight the text can trigger when refocused
-        # otherwise the entry will remain focused and the event can't trigger so the user would have to spam backspace or highlight manualy
+        # else the entry will remain focused and the event can't trigger so the user would have to spam backspace or highlight the previous input manually
         self.header.focus() # lol this is really fucking stupid but I can't think of a better way to do this
         
         self.magic_number = self.entry.get()
@@ -187,6 +202,7 @@ class MainUI(tk.Frame):
             self.offlineTesting()
             return
         
+        # some validation- won't catch invalid numbers
         if self.magic_number.isdigit():
             self.loadStart()
             Thread(target=self.getValues, args=(self.q, self.magic_number)).start()
@@ -200,16 +216,24 @@ class MainUI(tk.Frame):
 
 
     def awaitSauce(self):
+        """
+        wait for fetch thread to finish and push results in the queue before render
+        """
         try:
             self.sauce_data = self.q.get(False) # if item is not availible raises queue.Empty error
             self.loadDone()
             self.renderPreview()
-            
+
         except queue.Empty:
             self.root.after(100, self.awaitSauce)
 
 
     def getValues(self, q, magic_number):
+        """
+        get the html response and process out the required information- also predownload some images
+        
+        to be run with Thread due to internet latency
+        """
         # magic_number is already a string by implementation but whatever
         url = "".join(("https://nhentai.net/g/", str(magic_number)))
         
@@ -253,20 +277,23 @@ class MainUI(tk.Frame):
         # get upload time
         upload_time = info.find('time').text
         
-        # get first page of book
+        # get first image of book
         self.memory[1] = Image.open(BytesIO(get("".join(("https://i.nhentai.net/galleries/", str(gallery), "/1.jpg"))).content))
 
         q.put((title, subtitle, cover, fields, pages, upload_time, gallery, url))
 
 
     def viewBook(self):
-        Viewer(self)
+        """
+        run the viewer
+        """
+        Viewer(self) # why is this even a function
 
     
     def viewSettings(self):
         Settings(self)
     
-    
+    # testing stuff ignore
     def offlineTesting(self):
         self.loadStart()
         self.sauce_data = ("offline testing", "wow is this legal?", ImageTk.PhotoImage(Image.open("untitled.png").resize((350, 511), Image.ANTIALIAS)), [("Parodies", ("Aokana",)), ("Characters", ("Kurashina Asuka",)), ("Tags", ("lolicon", "flying fish"))], 5, "time", 1, "http://softloli.moe")
@@ -276,6 +303,9 @@ class MainUI(tk.Frame):
     
     
     def destroy(self): # write settings to file upon exit
+        """
+        override destroy method to save settings to file when gui is exited
+        """
         x = open("config.txt", "w")
         x.write(self.viewmode)
         x.close()
@@ -285,6 +315,24 @@ class MainUI(tk.Frame):
         
 # all the code from here on down is a complete mess. not that the code above is clean, just after this it gets even worse
 class Viewer(tk.Toplevel):
+    """
+    for the viewer- the window that pops up when you click view and shows you the images
+    
+    'page' and 'image' both mean the same thing- every page is a jpg image
+    
+    basically how this mess works is that the viewer subclasses a popup and based on the settings
+    will create and display a frame object from either Scale or Scroll
+    
+    both the classes have a render method that gets called to display the next image when button is pressed
+    
+    the first image is already downloaded with the preview data and subsequent images are downloaded when the one previous is displayed
+    eg. viewing page 1 will trigger the download for page 2, and viewing 2 will download 3
+    
+    only 1 image can be downloaded at a time and calls to display next image will be ignored if the image is still downloading
+    eg. if image 2 is displayed and 3 is still downloading, image 3 can not be displayed until it is downloaded as spawning multiple threads
+    at once will make the program hang forever
+    
+    """
     def __init__(self, base):
         tk.Toplevel.__init__(self, base)
         self.root = base.root
@@ -299,7 +347,7 @@ class Viewer(tk.Toplevel):
         self.ypad = (10, 30)
         
         self.curr_page = 1
-        
+
         self.views = {'scaled': Scale, 'scrolled': Scroll}        
         
         self.pressed = False
@@ -316,13 +364,13 @@ class Viewer(tk.Toplevel):
         self.focus() # give keyboard focus to the toplevel object(for key bindings)
         self.grab_set() # prevent interaction with main window while viewer is open
         
-        self.viewframe = self.views[self.base.viewmode](self)
+        self.viewframe = self.views[self.base.viewmode](self) # this seems pretty jank
         self.viewframe.pack(padx=self.xpad, pady=self.ypad)
         
         self.bind('<Left>', lambda event: self.prevPage())
         self.bind('<Right>', lambda event: self.nextPage())
         
-        # system to restrict 1 action per key press- change page functionality is disabled until key is released
+        # restrict 1 action per key press- change page functionality is disabled until key is released
         self.bind('<KeyRelease-Left>', self.resetPress)
         self.bind('<KeyRelease-Right>', self.resetPress)
         
@@ -330,17 +378,23 @@ class Viewer(tk.Toplevel):
 
 
     def loadPage(self):
+        """
+        called to load a new image
+        """
         print("call to load page {}".format(self.curr_page))
         try:
-            self.renderPage()
+            self.renderPage() # image is already in the memory and can instantly load 
 
-        except KeyError: # Image is still loading need to wait
-            self.loading = True
+        except KeyError: # background loading has not caught up
+            # self.loading = True
             print("load not finished retry in 100ms")
             self.root.after(100, self.loadPage)
 
 
     def renderPage(self):
+        """
+        display the image to the screen and starts the background loading of the next image
+        """
         print("rendering page {}".format(self.curr_page))
         self.viewframe.render(self.base.memory[self.curr_page])
         self.title("".join((self.base.magic_number, "- page ", str(self.curr_page))))
@@ -350,28 +404,41 @@ class Viewer(tk.Toplevel):
 
 
     def bufferNext(self):
+        """
+        load the next image
+        """
         if self.curr_page < self.pages:
-            try:
+            try: # image is already in memory nothing to do
                 self.base.memory[self.curr_page + 1]
                 print("page already loaded OK")
-            except KeyError:
+
+            except KeyError: # start thread to get the next image
                 print("page not loaded downloading")
-                if self.base.magic_number == "test":
+                if self.base.magic_number == "test": # testing ignore
                     self.base.memory[self.curr_page + 1] = Image.open("u" + str(self.curr_page + 1) + ".png")
                 else:
+                    self.loading = True
                     Thread(target=self.downloadImage, args=(self.gallery, self.curr_page + 1, self.q, self.base.memory)).start()  
                     self.root.after(100, self.waitImage)
 
 
     def waitImage(self):
+        """
+        wait for thread to finish and catch reponse in the queue
+        """
         try:
             response = self.q.get(False)
             self.loading = False
         except queue.Empty:
             self.root.after(100, self.waitImage)
 
-    
+
     def downloadImage(self, gallery, page, q, mem):
+        """
+        download an image and save it
+        
+        to be run with Thread
+        """
         print("thread started- fetching image")
         url = "".join(("https://i.nhentai.net/galleries/", str(gallery), "/", str(page), ".jpg"))
         load = Image.open(BytesIO(get(url).content))
@@ -382,6 +449,9 @@ class Viewer(tk.Toplevel):
 
 
     def nextPage(self):
+        """
+        call to next page, begin loading if conditions allow
+        """
         print("next")
         if not self.pressed and not self.loading and self.curr_page < self.pages:
             self.pressed = True
@@ -390,27 +460,40 @@ class Viewer(tk.Toplevel):
 
 
     def prevPage(self):
+        """
+        same as next but for prev
+        """
         print("prev")
-        if not self.pressed and not self.loading and self.curr_page > 1:
+        if not self.pressed and self.curr_page > 1: # previous pages will always be loaded so no need restrict when loading
             self.pressed = True
             self.curr_page -= 1
             self.loadPage()
 
     
     def clickHandle(self, event):
+        """
+        called from click binding and determines next or prev based on mouse position
+        """
         self.resetPress()
         self.nextPage() if event.x > self.viewframe.display_width / 2 else self.prevPage()
 
 
     def resetPress(self, event=None):
+        """
+        prevent rapid calling by holding down left/right key
+        """
         self.pressed = False
 
 
-# the 2 classes for rendering the image display- should be self explainatory what they both are
+
 class Scale(tk.Frame):
+    """
+    to render images in scaled form
+    """
     def __init__(self, base):
         tk.Frame.__init__(self, base)
         
+        # calculate image size
         self.scaled_height = base.win_h - sum(base.ypad)
         self.display_width = int(self.scaled_height * base.img_w / base.img_h)
         win_w = self.display_width + sum(base.xpad)
@@ -423,12 +506,18 @@ class Scale(tk.Frame):
     
     
     def render(self, image):
+        """
+        called to change the displayed image
+        """
         self.img_display = ImageTk.PhotoImage(image.resize((self.display_width, self.scaled_height), Image.ANTIALIAS))
         self.img_l['image'] = self.img_display
 
 
 
 class Scroll(tk.Frame):
+    """
+    to render images in fullsize form
+    """
     def __init__(self, base):
         tk.Frame.__init__(self, base)
         
@@ -459,12 +548,18 @@ class Scroll(tk.Frame):
         
         
     def scroll(self, event):
+        """
+        handle mouse scrolling
+        """
         if event.state == 0:
             self.screen.yview_scroll(int(-1 * (event.delta / 120)), 'units')
 
 
 # class for the settings tab. Im thinking to just integrate this into the base UI(no popup)
 class Settings(tk.Toplevel):
+    """
+    settings popup
+    """
     def __init__(self, base):
         tk.Toplevel.__init__(self, base)
         self.title("settings")
