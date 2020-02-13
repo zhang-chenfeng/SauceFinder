@@ -367,7 +367,10 @@ class Viewer(tk.Toplevel):
 
 
     def UI(self):
-        # self.transient(self.base) # popup appears as part of main window(not shown on taskbar)
+    
+        # decided to make the viewer non-transient so it appears as a seperate window and can be viewed without the main window open
+        # this should make it easier to interact with it through alt-tab and such should you need to hide from people watching your screen 
+        # self.transient(self.base)
         self.focus() # give keyboard focus to the toplevel object(for key bindings)
         self.grab_set() # prevent interaction with main window while viewer is open
         
