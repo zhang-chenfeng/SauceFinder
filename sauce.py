@@ -44,7 +44,6 @@ class MainUI(tk.Frame):
         self.viewmode = f.read()
         f.close()
         self.entry.focus()
-        self.pack(padx=(30, 30))
 
 
     def baseUI(self):
@@ -93,8 +92,9 @@ class MainUI(tk.Frame):
         # self.fields_f['bg'] = "yellow"
         # self.options_f['bg'] = "white"
         
+        self.pack(padx=(30, 30))
+
         self.head_f.grid(row=0, pady=(15, 0))
-        
         self.header.grid(row=0, column=0, pady=(5, 5))
         
         self.sub_f.grid(row=1, column=0, sticky="ew", pady=(0, 5))
@@ -316,12 +316,14 @@ class Viewer(tk.Toplevel):
         self.viewframe = self.views[self.base.viewmode](self)
         self.viewframe.pack(padx=self.xpad, pady=self.ypad)
         
-        self.bind('<Left>', self.prevPage)
-        self.bind('<Right>', self.nextPage)
+        self.bind('<Left>', lambda event: self.prevPage())
+        self.bind('<Right>', lambda event: self.nextPage())
         
         # system to restrict 1 action per key press- change page functionality is disabled until key is released
         self.bind('<KeyRelease-Left>', self.resetPress)
         self.bind('<KeyRelease-Right>', self.resetPress)
+        
+        self.bind("<Button-1>", self.clickHandle)
 
 
     def loadPage(self):
@@ -376,7 +378,7 @@ class Viewer(tk.Toplevel):
         print("thread done")
 
 
-    def nextPage(self, event):
+    def nextPage(self):
         print("next")
         if not self.pressed and not self.loading and self.curr_page < self.pages:
             self.pressed = True
@@ -384,15 +386,20 @@ class Viewer(tk.Toplevel):
             self.loadPage()
 
 
-    def prevPage(self, event):
+    def prevPage(self):
         print("prev")
         if not self.pressed and not self.loading and self.curr_page > 1:
             self.pressed = True
             self.curr_page -= 1
             self.loadPage()
 
+    
+    def clickHandle(self, event):
+        self.resetPress()
+        self.nextPage() if event.x > self.viewframe.display_width / 2 else self.prevPage()
+        
 
-    def resetPress(self, event):
+    def resetPress(self, event=None):
         self.pressed = False
 
 
@@ -404,8 +411,8 @@ class Scale(tk.Frame):
         ratio = base.img_w / base.img_h
 
         self.scaled_height = base.win_h - sum(base.ypad)
-        self.scaled_width = int(self.scaled_height * ratio)
-        win_w = self.scaled_width + sum(base.xpad)
+        self.display_width = int(self.scaled_height * ratio)
+        win_w = self.display_width + sum(base.xpad)
         
         base.geometry("{}x{}+{}+0".format(win_w, base.win_h, (base.base.width - win_w) // 2)) # base.base- thats not confusing at all
         base.update_idletasks() # required for whatever reason
@@ -415,7 +422,7 @@ class Scale(tk.Frame):
     
     
     def render(self, image):
-        self.img_display = ImageTk.PhotoImage(image.resize((self.scaled_width, self.scaled_height), Image.ANTIALIAS))
+        self.img_display = ImageTk.PhotoImage(image.resize((self.display_width, self.scaled_height), Image.ANTIALIAS))
         self.img_l['image'] = self.img_display
 
 
@@ -424,13 +431,14 @@ class Scroll(tk.Frame):
     def __init__(self, base):
         tk.Frame.__init__(self, base)
         
-        win_w = base.img_w + sum(base.xpad)
+        self.display_width = base.img_w
+        win_w = self.display_width + sum(base.xpad)
         screen_height = base.win_h - sum(base.ypad)
         
         base.geometry("{}x{}+{}+0".format(win_w, base.win_h, (base.base.width - win_w) // 2))
         base.update_idletasks()
         
-        self.screen = tk.Canvas(self, width=base.img_w, height=screen_height)
+        self.screen = tk.Canvas(self, width=self.display_width, height=screen_height)
         self.bar = tk.Scrollbar(self, orient='vertical', command=self.screen.yview)
         self.screen.configure(yscrollcommand=self.bar.set)
         
@@ -440,7 +448,7 @@ class Scroll(tk.Frame):
         base.bind("<MouseWheel>", self.scroll)
         base.bind("<Up>", lambda event: self.screen.yview_scroll(-1, "units"))
         base.bind("<Down>", lambda event: self.screen.yview_scroll( 1, "units"))
-    
+
 
     def render(self, image):
         self.img_display = ImageTk.PhotoImage(image)
@@ -454,7 +462,7 @@ class Scroll(tk.Frame):
             self.screen.yview_scroll(int(-1 * (event.delta / 120)), 'units')
 
 
-# class for the settings tab. Im thinking to just integrate this into the base UI
+# class for the settings tab. Im thinking to just integrate this into the base UI(no popup)
 class Settings(tk.Toplevel):
     def __init__(self, base):
         tk.Toplevel.__init__(self, base)
@@ -465,7 +473,7 @@ class Settings(tk.Toplevel):
 
         
     def UI(self):
-        self.transient(self.base)
+        self.transient(self.base) # usual stuff
         self.grab_set()
         self.focus()
         
@@ -493,6 +501,7 @@ class Settings(tk.Toplevel):
 
 
 def main():
+    # get screen size info 
     for monitor in EnumDisplayMonitors():
         info = GetMonitorInfo(monitor[0])
         if info['Flags'] == 1:
