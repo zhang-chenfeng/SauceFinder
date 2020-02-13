@@ -43,70 +43,82 @@ class MainUI(tk.Frame):
         f = open("config.txt", "r")
         self.viewmode = f.read()
         f.close()
+        self.entry.focus()
+        self.pack(padx=(30, 30))
 
 
     def baseUI(self):
         self.root.title("Sauce Finder")
-        self.img_tmp = ImageTk.PhotoImage(Image.open("template.png"))
+        self.img_tmp = ImageTk.PhotoImage(Image.open("tmep.png"))
+        
+        self.head_f = tk.Frame(self, borderwidth=3, relief='ridge')
         
         # header
-        self.header = tk.Label(self.root, width=80, text="Sauce Finder", font=(None, 15))
+        self.header = tk.Label(self.head_f, width=80, text="Sauce Finder", font=(None, 15))
         
         # 2nd line frame
-        self.sub_f = tk.Frame(self.root, bg='red')
+        self.sub_f = tk.Frame(self.head_f)
         
         # input frame
         self.input_f = tk.Frame(self.sub_f)
-        self.prompt = tk.Label(self.input_f, text="Enter Sauce:")
-        self.entry = tk.Entry(self.input_f, width=10)
+        self.prompt = tk.Label(self.input_f, text="Enter Sauce")
+        self.entry = tk.Entry(self.input_f, width=8)
         self.entry.bind("<FocusIn>", lambda event: self.entry.selection_range(0, tk.END))
         self.entry.bind("<Return>", lambda event: self.fetchSauce())
-        self.search = tk.Button(self.input_f, text="GO", command=self.fetchSauce)
+        self.search = tk.Button(self.input_f, width=4, text="GO", command=self.fetchSauce)
         
         # settings
-        self.settings_b = tk.Button(self.sub_f, text="settings", command=self.viewSettings)
+        self.settings_b = tk.Button(self.sub_f, width=10, text="settings", command=self.viewSettings)
+        
+        #
+        self.line = tk.Frame(self, height=2, bg='black')
         
         # sub headers
-        self.title_l = tk.Label(self.root, text=" ", font=(None, 14), wraplength=875)
-        self.subtitle_l = tk.Label(self.root, text=" ", font=(None, 12), wraplength=875)
+        self.title_l = tk.Label(self, text=" ", font=(None, 14), wraplength=875)
+        self.subtitle_l = tk.Label(self, text=" ", font=(None, 12), wraplength=875)
         
         # preview frame
-        self.preview_f = tk.Frame(self.root)
+        self.preview_f = tk.Frame(self)
         self.cover_l = tk.Label(self.preview_f, image=self.img_tmp)
         self.side_f = tk.Frame(self.preview_f)
         self.fields_f = tk.Frame(self.side_f)
         self.options_f = tk.Frame(self.side_f)
-        self.view_b = tk.Button(self.options_f, text="View", command=self.viewBook)
-        self.link_b = tk.Button(self.options_f, text="Link")
+        self.view_b = tk.Button(self.options_f, width=10, text="View", command=self.viewBook)
+        self.link_b = tk.Button(self.options_f, width=10, text="Link")
         
         # UI visualization for testing 
         # self.preview_f['bg'] = "red"
         # self.cover_l['bg'] = "blue"
         # self.side_f['bg'] = "green"
         # self.fields_f['bg'] = "yellow"
-        self.options_f['bg'] = "white"
+        # self.options_f['bg'] = "white"
         
-        self.header.grid(row=0, column=0, padx=(30, 30), pady=(15, 10))
+        self.head_f.grid(row=0, pady=(15, 0))
         
-        self.sub_f.grid(row=1, column=0, padx=(30, 30), sticky="ew")
+        self.header.grid(row=0, column=0, pady=(5, 5))
         
-        self.input_f.grid(row=0, column=0, padx=(300, 300))
-        self.prompt.grid(row=0, column=0, padx=(5, 2))
-        self.entry.grid(row=0, column=1, padx=(2, 2))
-        self.search.grid(row=0, column=2, padx=(2, 5))
-        
-        self.settings_b.grid(row=0, column=1, sticky="e")
-        
-        self.title_l.grid(row=2, column=0, padx=(30, 30), pady=(15, 2), sticky=tk.E+tk.W)
-        self.subtitle_l.grid(row=3, column=0, padx=(30, 30), pady=(5, 10), sticky=tk.E+tk.W)
+        self.sub_f.grid(row=1, column=0, sticky="ew", pady=(0, 5))
+        self.sub_f.grid_columnconfigure(0, weight=1)
+        self.sub_f.grid_columnconfigure(2, weight=1)
 
-        self.preview_f.grid(row=4, padx=(30, 30), pady=(5, 15), sticky=tk.W+tk.E)
+        self.input_f.grid(row=0, column=1, padx=(20 + 10 * 8, 0))
+        self.prompt.grid(row=0, column=0, padx=(5, 5))
+        self.entry.grid(row=0, column=1, padx=(5, 5))
+        self.search.grid(row=0, column=2, padx=(5, 5))
+        self.settings_b.grid(row=0, column=2, sticky="e", padx=(0, 20))
+
+        # self.line.grid(row=0, column=0, pady=(5, 5), sticky='ew')
+        
+        self.title_l.grid(row=1, column=0, pady=(15, 2), sticky=tk.E+tk.W)
+        self.subtitle_l.grid(row=2, column=0, pady=(5, 10), sticky=tk.E+tk.W)
+
+        self.preview_f.grid(row=3, pady=(5, 15), sticky=tk.W+tk.E)
         self.cover_l.grid(row=0, column=0, padx=(10, 10), sticky=tk.N+tk.W)        
         self.side_f.grid(row=0, column=1, padx=(0, 10), sticky=tk.N)
         self.fields_f.grid(row=0, sticky=tk.N)
         # self.options_f.grid(row=1, pady=(0, 10))
-        self.view_b.grid(row=0, column=0)
-        self.link_b.grid(row=0, column=1)
+        self.view_b.grid(row=0, column=0, padx=(20, 20))
+        self.link_b.grid(row=0, column=1, padx=(20, 0))
 
 
     def renderPreview(self):
@@ -128,10 +140,10 @@ class MainUI(tk.Frame):
             
             # render fields & tags
             for index, (field, tags) in enumerate(fields):
-                tk.Label(self.fields_f, text=field, font=(None, 12)).grid(row=index, column=0, sticky=tk.E+tk.N)
+                tk.Label(self.fields_f, text=field + ":", font=(None, 12)).grid(row=index, column=0, sticky=tk.E+tk.N)
                 tk.Label(self.fields_f, text=", ".join(tags), font=(None, 12), wraplength=440, justify='left').grid(row=index, column=1, sticky=tk.W+tk.N, padx=(10, 0), pady=(0, 20))
             self.link_b['command'] = lambda: webbrowser.open(url)
-            self.options_f.grid(row=1, pady=(0, 10), sticky=tk.W)
+            self.options_f.grid(row=1, pady=(20, 10), sticky=tk.W)
             
         else: # make this another function later
             self.title_l['text'] = "File Not Found"
@@ -266,7 +278,7 @@ class MainUI(tk.Frame):
         x.close()
         
         tk.Frame.destroy(self)
-        
+
         
 # all the code from here on down is a complete mess. not that the code above is clean, just after this it gets even worse
 class Viewer(tk.Toplevel):
@@ -426,6 +438,8 @@ class Scroll(tk.Frame):
         self.bar.grid(row=0, column=1, sticky='ns')
         
         base.bind("<MouseWheel>", self.scroll)
+        base.bind("<Up>", lambda event: self.screen.yview_scroll(-1, "units"))
+        base.bind("<Down>", lambda event: self.screen.yview_scroll( 1, "units"))
     
 
     def render(self, image):
@@ -455,17 +469,22 @@ class Settings(tk.Toplevel):
         self.grab_set()
         self.focus()
         
-        self.l = tk.Label(self, text="viewer mode")
+        self.f1 = tk.Frame(self)
+        self.f1.grid(row=0, padx=(10, 10), pady=(10, 10))
+        self.l = tk.Label(self.f1, text="viewer mode")
         self.l.grid(row=0, column=0)
         
-        tk.Radiobutton(self, text="scaled", variable=self.selection, value="scaled").grid(row=0, column=1)
-        tk.Radiobutton(self, text="scrolled", variable=self.selection, value="scrolled").grid(row=0, column=2)
+        tk.Radiobutton(self.f1, text="scaled", variable=self.selection, value="scaled").grid(row=0, column=1)
+        tk.Radiobutton(self.f1, text="scrolled", variable=self.selection, value="scrolled").grid(row=0, column=2)
         
-        self.ok = tk.Button(self, text="ok", command=self.exit)
-        self.cancel = tk.Button(self, text="cancel", command=self.destroy)
+        self.exit_f = tk.Frame(self)
+        self.ok = tk.Button(self.exit_f, width=7, text="ok", command=self.exit)
+        self.cancel = tk.Button(self.exit_f, width=7, text="cancel", command=self.destroy)
         
-        self.ok.grid(row=1, column=1, sticky='ew')
-        self.cancel.grid(row=1, column=2, sticky='ew')
+        self.exit_f.grid(row=1, pady=(0, 10), sticky='ew')
+        self.exit_f.grid_columnconfigure(0, weight=1)
+        self.ok.grid(row=0, column=1, padx=(0, 10), sticky='e')
+        self.cancel.grid(row=0, column=2, padx=(0, 10), sticky='e')
         
         
     def exit(self):
