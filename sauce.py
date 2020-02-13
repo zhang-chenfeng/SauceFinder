@@ -43,6 +43,7 @@ class MainUI(tk.Frame):
         self.width, self.height, = dimensions
         self.q = queue.Queue()
         self.magic_number = 0
+        self.loading = False
         self.memory = {}
         self.sauce_data = ()
         self.baseUI()
@@ -168,6 +169,7 @@ class MainUI(tk.Frame):
         """
         procedures to be run when preview loading begins
         """
+        self.loading = True
         self.search['state'] = 'disabled'
         self.title_l['text'] = "Loading..."
         self.subtitle_l['text'] = "正在加载。。。"
@@ -185,34 +187,36 @@ class MainUI(tk.Frame):
         end_time = time.time()
         print("response received {}s elapsed".format(end_time-self.time_track))
         self.search['state'] = 'normal'
+        self.loading = False
 
 
     def fetchSauce(self):
         """
         run when user clicks go/enter key, starts the thread with fetch process and starts waiting for response
         """
-        # focus an arbitrary label to remove focus from the entry field so the onfocus event to highlight the text can trigger when refocused
-        # else the entry will remain focused and the event can't trigger so the user would have to spam backspace or highlight the previous input manually
-        self.header.focus() # lol this is really fucking stupid but I can't think of a better way to do this
-        
-        self.magic_number = self.entry.get()
-        
-        # for offline testing
-        if self.magic_number == "test":
-            self.offlineTesting()
-            return
-        
-        # some validation- won't catch invalid numbers
-        if self.magic_number.isdigit():
-            self.loadStart()
-            Thread(target=self.getValues, args=(self.q, self.magic_number)).start()
-            self.root.after(100, self.awaitSauce)
-        else:
-            self.title_l['text'] = "invalid number"
-            self.subtitle_l['text'] = "无效号码"
-            self.destroyChildren(self.fields_f)
-            self.cover_l['image'] = self.img_tmp
-            self.options_f.grid_forget()
+        if not self.loading:
+            # focus an arbitrary label to remove focus from the entry field so the onfocus event to highlight the text can trigger when refocused
+            # else the entry will remain focused and the event can't trigger so the user would have to spam backspace or highlight the previous input manually
+            self.header.focus() # lol this is really fucking stupid but I can't think of a better way to do this
+            
+            self.magic_number = self.entry.get()
+            
+            # for offline testing
+            if self.magic_number == "test":
+                self.offlineTesting()
+                return
+            
+            # some validation- won't catch invalid numbers
+            if self.magic_number.isdigit():
+                self.loadStart()
+                Thread(target=self.getValues, args=(self.q, self.magic_number)).start()
+                self.root.after(100, self.awaitSauce)
+            else:
+                self.title_l['text'] = "invalid number"
+                self.subtitle_l['text'] = "无效号码"
+                self.destroyChildren(self.fields_f)
+                self.cover_l['image'] = self.img_tmp
+                self.options_f.grid_forget()
 
 
     def awaitSauce(self):
