@@ -11,6 +11,9 @@
 #  - Pillow v7.0 or anything really
 #  - pywin32 whatever version is on PyPI right now
 #
+#  just install from requirements.txt
+#
+#
 #  created in Python 3.7.4 but there's no reason why it wouldn't work on any version
 #  that isn't something ridiculous
 #------------------------------------------------------------------------------------
@@ -109,13 +112,13 @@ class MainUI(tk.Frame):
 
         # self.line.grid(row=0, column=0, pady=(5, 5), sticky='ew')
         
-        self.title_l.grid(row=1, column=0, pady=(15, 2), sticky=tk.E+tk.W)
-        self.subtitle_l.grid(row=2, column=0, pady=(5, 10), sticky=tk.E+tk.W)
+        self.title_l.grid(row=1, column=0, pady=(15, 2), sticky='ew')
+        self.subtitle_l.grid(row=2, column=0, pady=(5, 10), sticky='ew')
 
-        self.preview_f.grid(row=3, pady=(5, 15), sticky=tk.W+tk.E)
-        self.cover_l.grid(row=0, column=0, padx=(10, 10), sticky=tk.N+tk.W)        
-        self.side_f.grid(row=0, column=1, padx=(0, 10), sticky=tk.N)
-        self.fields_f.grid(row=0, sticky=tk.N)
+        self.preview_f.grid(row=3, pady=(5, 15), sticky='ew')
+        self.cover_l.grid(row=0, column=0, padx=(10, 10), sticky='nw')        
+        self.side_f.grid(row=0, column=1, padx=(0, 10), sticky='n')
+        self.fields_f.grid(row=0, sticky='n')
         # self.options_f.grid(row=1, pady=(0, 10))
         self.view_b.grid(row=0, column=0, padx=(20, 20))
         self.link_b.grid(row=0, column=1, padx=(20, 0))
@@ -140,8 +143,8 @@ class MainUI(tk.Frame):
             
             # render fields & tags
             for index, (field, tags) in enumerate(fields):
-                tk.Label(self.fields_f, text=field + ":", font=(None, 12)).grid(row=index, column=0, sticky=tk.E+tk.N)
-                tk.Label(self.fields_f, text=", ".join(tags), font=(None, 12), wraplength=440, justify='left').grid(row=index, column=1, sticky=tk.W+tk.N, padx=(10, 0), pady=(0, 20))
+                tk.Label(self.fields_f, text=field + ":", font=(None, 12)).grid(row=index, column=0, sticky='ne')
+                tk.Label(self.fields_f, text=", ".join(tags), font=(None, 12), wraplength=440, justify='left').grid(row=index, column=1, sticky='nw', padx=(10, 0), pady=(0, 20))
             self.link_b['command'] = lambda: webbrowser.open(url)
             self.options_f.grid(row=1, pady=(20, 10), sticky=tk.W)
             
@@ -397,7 +400,7 @@ class Viewer(tk.Toplevel):
     def clickHandle(self, event):
         self.resetPress()
         self.nextPage() if event.x > self.viewframe.display_width / 2 else self.prevPage()
-        
+
 
     def resetPress(self, event=None):
         self.pressed = False
@@ -407,11 +410,9 @@ class Viewer(tk.Toplevel):
 class Scale(tk.Frame):
     def __init__(self, base):
         tk.Frame.__init__(self, base)
-
-        ratio = base.img_w / base.img_h
-
+        
         self.scaled_height = base.win_h - sum(base.ypad)
-        self.display_width = int(self.scaled_height * ratio)
+        self.display_width = int(self.scaled_height * base.img_w / base.img_h)
         win_w = self.display_width + sum(base.xpad)
         
         base.geometry("{}x{}+{}+0".format(win_w, base.win_h, (base.base.width - win_w) // 2)) # base.base- thats not confusing at all
@@ -493,8 +494,8 @@ class Settings(tk.Toplevel):
         self.exit_f.grid_columnconfigure(0, weight=1)
         self.ok.grid(row=0, column=1, padx=(0, 10), sticky='e')
         self.cancel.grid(row=0, column=2, padx=(0, 10), sticky='e')
-        
-        
+
+
     def exit(self):
         self.base.viewmode = self.selection.get()
         self.destroy()
