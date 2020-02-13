@@ -467,6 +467,7 @@ class Scroll(tk.Frame):
 class Settings(tk.Toplevel):
     def __init__(self, base):
         tk.Toplevel.__init__(self, base)
+        self.title("settings")
         self.base = base
         self.selection = tk.StringVar()
         self.selection.set(self.base.viewmode)
