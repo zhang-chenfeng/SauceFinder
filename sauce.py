@@ -31,6 +31,7 @@ from requests import get
 from bs4 import BeautifulSoup
 from win32api import EnumDisplayMonitors, GetMonitorInfo
 
+# 177978 for testing - this one hentai literaly has every possible jank that breaks my code
 
 
 class MainUI(tk.Frame):
@@ -148,7 +149,7 @@ class MainUI(tk.Frame):
             # render fields & tags
             for index, (field, tags) in enumerate(fields):
                 tk.Label(self.fields_f, text=field + ":", font=(None, 12)).grid(row=index, column=0, sticky='ne')
-                tk.Label(self.fields_f, text=", ".join(tags), font=(None, 12), wraplength=440, justify='left').grid(row=index, column=1, sticky='nw', padx=(10, 0), pady=(0, 20))
+                tk.Label(self.fields_f, text=", ".join(tags), font=(None, 12), wraplength=420, justify='left').grid(row=index, column=1, sticky='nw', padx=(10, 0), pady=(0, 20))
             self.link_b['command'] = lambda: webbrowser.open(url)
             self.options_f.grid(row=1, pady=(20, 10), sticky=tk.W)
             
@@ -502,7 +503,7 @@ class Scale(tk.Frame):
     """
     def __init__(self, base):
         tk.Frame.__init__(self, base)
-        
+        self.base = base
         # calculate image size
         self.scaled_height = base.win_h - sum(base.ypad)
         self.display_width = int(self.scaled_height * base.img_w / base.img_h)
@@ -519,7 +520,14 @@ class Scale(tk.Frame):
         """
         called to change the displayed image
         """
-        self.img_display = ImageTk.PhotoImage(image.resize((self.display_width, self.scaled_height), Image.ANTIALIAS))
+        img_w, img_h = image.size
+        max_h = self.scaled_height
+        display_width = int(max_h * img_w / img_h)
+        if display_width > self.display_width:
+            display_width = self.display_width
+            max_h = int(display_width * img_h / img_w)
+
+        self.img_display = ImageTk.PhotoImage(image.resize((display_width, max_h), Image.ANTIALIAS))
         self.img_l['image'] = self.img_display
 
 
@@ -552,6 +560,7 @@ class Scroll(tk.Frame):
 
     def render(self, image):
         self.img_display = ImageTk.PhotoImage(image)
+        self.screen.delete('all')
         self.screen.create_image(0, 0, image=self.img_display, anchor='nw')
         self.screen.configure(scrollregion=self.screen.bbox('all'))
         self.screen.yview_moveto(0)
