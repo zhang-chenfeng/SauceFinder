@@ -34,11 +34,11 @@ In case you are braindead:
 search your 6 digit numbers
 
 ###### Preview
-`![preview](futurelink)`\
+<img src="https://cdn.discordapp.com/attachments/509538544457351193/677663577200525335/unknown.png" width="400" height="330">\
 view preview with titles, cover photo, tags, pages, and upload date
 
 ###### Viewing
-`![scale](futurelink)`\
+<img src=https://cdn.discordapp.com/attachments/509538544457351193/677663974543589406/unknown.png width="220" height="340">\
 view your stuffs. Supports navigation with mouse and/or arrow keys
 
 ###### Settings
