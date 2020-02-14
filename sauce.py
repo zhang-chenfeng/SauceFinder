@@ -363,6 +363,10 @@ class Viewer(tk.Toplevel):
         
         self.q = queue.Queue()
         
+        encodes = ("jpg", "png")
+        self.main_ending = self.base.file_ending
+        self.other_ending = encodes[~encodes.index(self.main_ending)] # lol 
+
         self.UI()
         self.loadPage()
 
@@ -451,8 +455,14 @@ class Viewer(tk.Toplevel):
         to be run with Thread
         """
         print("thread started- fetching image")
-        url = "".join(("https://i.nhentai.net/galleries/", str(gallery), "/", str(page), ".", self.base.file_ending))
-        load = Image.open(BytesIO(get(url).content))
+        url = "".join(("https://i.nhentai.net/galleries/", str(gallery), "/", str(page), "."))
+        
+        response = get(url + self.main_ending)
+        
+        if not response.ok: # 404 file encoding is jank
+            response = get(url + self.other_ending)
+
+        load = Image.open(BytesIO(response.content))
         print("got image")
         mem[page] = load
         q.put(0)
@@ -480,7 +490,7 @@ class Viewer(tk.Toplevel):
             self.curr_page -= 1
             self.loadPage()
 
-    
+
     def clickHandle(self, event):
         """
         called from click binding and determines next or prev based on mouse position
@@ -559,6 +569,10 @@ class Scroll(tk.Frame):
 
 
     def render(self, image):
+        img_w, img_h = image.size
+        if img_w > self.display_width:
+            image = image.resize((self.display_width, int(self.display_width * img_h / img_w)), Image.ANTIALIAS)
+        
         self.img_display = ImageTk.PhotoImage(image)
         self.screen.delete('all')
         self.screen.create_image(0, 0, image=self.img_display, anchor='nw')
