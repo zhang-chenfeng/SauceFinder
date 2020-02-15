@@ -132,7 +132,7 @@ class MainUI(tk.Frame):
     def renderPreview(self):
         if self.sauce_data:        
             title, subtitle, cover, fields, pages, upload_time, gallery, url, self.file_ending = self.sauce_data
-            
+
             # page count and upload date are rendered same as fields in this view
             fields.append(("Pages", [str(pages)]))
             fields.append(("Uploaded", [upload_time]))
@@ -156,7 +156,7 @@ class MainUI(tk.Frame):
         else: # make this another function later
             self.title_l['text'] = "File Not Found"
             self.subtitle_l['text'] = "server returned 404"
-
+ 
 
     def destroyChildren(self, frame):
         """
@@ -265,7 +265,6 @@ class MainUI(tk.Frame):
         split = img_url.split("/")
         gallery = split[-2] # not the be confused with the gallery in the url
         file_ending = split[-1].split(".")[-1] # for whatever reason the file types are not consistent
-        print(file_ending)
         
         # get image and load
         response = get(img_url)
@@ -285,6 +284,7 @@ class MainUI(tk.Frame):
         # get upload time
         upload_time = info.find('time').text
         
+        self.memory.clear()
         # get first image of book
         self.memory[1] = Image.open(BytesIO(get("".join(("https://i.nhentai.net/galleries/", str(gallery), "/1.", file_ending))).content))
 
@@ -364,8 +364,8 @@ class Viewer(tk.Toplevel):
         self.q = queue.Queue()
         
         encodes = ("jpg", "png")
-        self.main_ending = self.base.file_ending
-        self.other_ending = encodes[~encodes.index(self.main_ending)] # lol 
+        self.main_ending = self.base.file_ending # assume the first image uses the main encoding
+        self.other_ending = encodes[~encodes.index(self.main_ending)] # lol there has to be a better way to do this
 
         self.UI()
         self.loadPage()
@@ -403,6 +403,7 @@ class Viewer(tk.Toplevel):
         except KeyError: # background loading has not caught up
             # self.loading = True
             print("load not finished retry in 100ms")
+            self.title("".join((self.base.magic_number, "- page ", str(self.curr_page))))
             self.root.after(100, self.loadPage)
 
 
@@ -536,7 +537,7 @@ class Scale(tk.Frame):
         if display_width > self.display_width:
             display_width = self.display_width
             max_h = int(display_width * img_h / img_w)
-
+            
         self.img_display = ImageTk.PhotoImage(image.resize((display_width, max_h), Image.ANTIALIAS))
         self.img_l['image'] = self.img_display
 
