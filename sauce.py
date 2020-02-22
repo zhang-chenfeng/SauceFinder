@@ -141,7 +141,8 @@ class MainUI(tk.Frame):
             tk.Label(self.fields_f, text=",  ".join(tags), font=(None, 12), wraplength=420, justify='left').grid(row=index, column=1, sticky='nw', padx=(10, 0), pady=(0, 20))
         self.link_b['command'] = lambda: webbrowser.open(url)
         self.options_f.grid(row=1, pady=(20, 10), sticky=tk.W)
-    
+
+
     def errPage(self, title, subtitle):
         self.title_l['text'] = title
         self.subtitle_l['text']  = subtitle
@@ -437,7 +438,7 @@ class Viewer(tk.Toplevel):
                     self.base.memory[self.curr_page + 1] = Image.open("u" + str(self.curr_page + 1) + ".png")
                 else:
                     self.loading = True
-                    Thread(target=self.downloadImage, args=(self.gallery, self.curr_page + 1, self.q, self.base.memory)).start()  
+                    Thread(target=self.downloadImage).start()  
                     self.root.after(100, self.waitImage)
 
 
@@ -452,14 +453,16 @@ class Viewer(tk.Toplevel):
             self.root.after(100, self.waitImage)
 
 
-    def downloadImage(self, gallery, page, q, mem):
+    def downloadImage(self):
         """
         download an image and save it
         
         to be run with Thread
         """
+        base = self.base
+        page = self.curr_page + 1
         print("thread started- fetching image")
-        url = "https://i.nhentai.net/galleries/{}/{}.".format(str(gallery), str(page))
+        url = "https://i.nhentai.net/galleries/{}/{}.".format(str(base.sauce_data['gallery']), str(page))
         
         response = get(url + self.main_ending)
         
@@ -468,8 +471,8 @@ class Viewer(tk.Toplevel):
 
         load = Image.open(BytesIO(response.content))
         print("got image")
-        mem[page] = load
-        q.put(0)
+        base.memory[page] = load
+        self.q.put(0)
         print("thread done")
 
 
