@@ -46,14 +46,14 @@ class MainUI(tk.Frame):
         self.magic_number = 0
         self.loading = False
         self.memory = {}
-        self.sauce_data = ()
+        self.sauce_data = {'title': '', 'subtitle': '', 'cover': None, 'fields': '', 'pages': 0, 'upload': '', 'gallery': '', 'number': '', 'ending': ''}
         self.baseUI()
         f = open("config.txt", "r")
         self.viewmode = f.read()
         f.close()
         self.entry.focus()
-
-
+        
+        
     def baseUI(self):
         self.root.title("Sauce Finder")
         self.img_tmp = ImageTk.PhotoImage(Image.open("tmep.png"))
@@ -65,7 +65,7 @@ class MainUI(tk.Frame):
         
         # 2nd line frame
         self.sub_f = tk.Frame(self.head_f)
-        
+
         # input frame
         self.input_f = tk.Frame(self.sub_f)
         self.prompt = tk.Label(self.input_f, text="Enter Sauce")
@@ -76,9 +76,6 @@ class MainUI(tk.Frame):
         
         # settings
         self.settings_b = tk.Button(self.sub_f, width=10, text="settings", command=self.viewSettings)
-        
-        #
-        self.line = tk.Frame(self, height=2, bg='black')
         
         # sub headers
         self.title_l = tk.Label(self, text=" ", font=(None, 14), wraplength=875)
@@ -114,8 +111,6 @@ class MainUI(tk.Frame):
         self.entry.grid(row=0, column=1, padx=(5, 5))
         self.search.grid(row=0, column=2, padx=(5, 5))
         self.settings_b.grid(row=0, column=2, sticky="e", padx=(0, 20))
-
-        # self.line.grid(row=0, column=0, pady=(5, 5), sticky='ew')
         
         self.title_l.grid(row=1, column=0, pady=(15, 2), sticky='ew')
         self.subtitle_l.grid(row=2, column=0, pady=(5, 10), sticky='ew')
@@ -130,34 +125,30 @@ class MainUI(tk.Frame):
 
 
     def renderPreview(self):
-        if self.sauce_data:        
-            title, subtitle, cover, fields, pages, upload_time, gallery, url, self.file_ending = self.sauce_data
+        data = self.sauce_data
+        title, subtitle, cover, fields, pages, upload_time, gallery, url, self.file_ending = self.sauce_data
 
-            # page count and upload date are rendered same as fields in this view
-            fields.append(("Pages", [str(pages)]))
-            fields.append(("Uploaded", [upload_time]))
+        self.title_l['text'] = data['title']
+        self.subtitle_l['text'] = data['subtitle']
+        self.cover_l['image'] = data['cover']
 
-            self.title_l['text'] = title
-            self.subtitle_l['text'] = subtitle
-            
-            # I don't know why you have to do this- I just know that if you don't the picture won't appear
-            self.cover_l['image'] = cover
-            self.cover_l.image = cover
-            # oh I know why now, if you don't bind your image to something the garbage collector will delete it once the function returns 
-            # and the local variable goes out of scope
-            
-            # render fields & tags
-            for index, (field, tags) in enumerate(fields):
-                tk.Label(self.fields_f, text=field + ":", font=(None, 12)).grid(row=index, column=0, sticky='ne')
-                tk.Label(self.fields_f, text=", ".join(tags), font=(None, 12), wraplength=420, justify='left').grid(row=index, column=1, sticky='nw', padx=(10, 0), pady=(0, 20))
-            self.link_b['command'] = lambda: webbrowser.open(url)
-            self.options_f.grid(row=1, pady=(20, 10), sticky=tk.W)
-            
-        else: # make this another function later
-            self.title_l['text'] = "File Not Found"
-            self.subtitle_l['text'] = "server returned 404"
- 
-
+        # render fields & tags
+        fields = data['fields']
+        fields.append(("Pages", [str(data['pages'])]))
+        fields.append(("Uploaded", [data['upload']]))
+        
+        for index, (field, tags) in enumerate(fields):
+            tk.Label(self.fields_f, text=field + ":", font=(None, 12)).grid(row=index, column=0, sticky='ne')
+            tk.Label(self.fields_f, text=",  ".join(tags), font=(None, 12), wraplength=420, justify='left').grid(row=index, column=1, sticky='nw', padx=(10, 0), pady=(0, 20))
+        self.link_b['command'] = lambda: webbrowser.open(url)
+        self.options_f.grid(row=1, pady=(20, 10), sticky=tk.W)
+    
+    
+    def errPage(self, title, subtitle):
+        self.title_l['text'] = title
+        self.subtitle_l['text']  = subtitle
+        
+        
     def destroyChildren(self, frame):
         """
         permanently delete all the items spawned inside a widget
@@ -177,7 +168,7 @@ class MainUI(tk.Frame):
         self.destroyChildren(self.fields_f) # destroy any tags rendered from previous previews
         self.cover_l['image'] = self.img_tmp
         self.options_f.grid_forget()
-        print("data fetch started for {}".format(self.magic_number))
+        print("data fetch started for {}".format(self.sauce_data['number']))
         self.time_track = time.time()
 
     # and here
@@ -200,17 +191,17 @@ class MainUI(tk.Frame):
             # else the entry will remain focused and the event can't trigger so the user would have to spam backspace or highlight the previous input manually
             self.header.focus() # lol this is really fucking stupid but I can't think of a better way to do this
             
-            self.magic_number = self.entry.get()
+            self.sauce_data['number'] = self.entry.get()
             
             # for offline testing
-            if self.magic_number == "test":
+            if self.sauce_data['number'] == "test":
                 self.offlineTesting()
                 return
             
             # some validation- won't catch invalid numbers
-            if self.magic_number.isdigit():
+            if self.sauce_data['number'].isdigit():
                 self.loadStart()
-                Thread(target=self.getValues, args=(self.q, self.magic_number)).start()
+                Thread(target=self.getValues).start()
                 self.root.after(100, self.awaitSauce)
             else:
                 self.title_l['text'] = "invalid number"
@@ -225,26 +216,28 @@ class MainUI(tk.Frame):
         wait for fetch thread to finish and push results in the queue before render
         """
         try:
-            self.sauce_data = self.q.get(False) # if item is not availible raises queue.Empty error
+            response = self.q.get(False) # if item is not availible raises queue.Empty error
             self.loadDone()
-            self.renderPreview()
-
+            self.errPage("File Not Found", "server returned 404") if response else self.renderPreview()
+                
         except queue.Empty:
             self.root.after(100, self.awaitSauce)
 
 
-    def getValues(self, q, magic_number):
+    def getValues(self):
         """
         get the html response and process out the required information- also predownload some images
         
         to be run with Thread due to internet latency
         """
+        data = self.sauce_data
+        
         # magic_number is already a string by implementation but whatever
-        url = "".join(("https://nhentai.net/g/", str(magic_number)))
+        url = "https://nhentai.net/g/{}".format(str(data['number']))
         
         response = get(url)
         if not response.ok:
-            q.put([])
+            self.q.put(-1)
             return
 
         page = BeautifulSoup(response.text, 'html.parser')
@@ -256,20 +249,24 @@ class MainUI(tk.Frame):
         info = page.find('div', id='info')
         
         # get titles - not sure if it's possible for title to also not exist but just to be safe
-        title = (info.find('h1') or blank_tag).string.strip()
-        subtitle = (info.find('h2') or blank_tag).string.strip()
+        data['title'] = (info.find('h1') or blank_tag).string.strip()
+        data['subtitle'] = (info.find('h2') or blank_tag).string.strip()
         
         # get image preview
         cover_container = page.find('div', id='cover')
         img_url = cover_container.find('img')['data-src']
         split = img_url.split("/")
-        gallery = split[-2] # not the be confused with the gallery in the url
-        file_ending = split[-1].split(".")[-1] # for whatever reason the file types are not consistent
+        
+        data['gallery'] = split[-2] # not the be confused with the gallery in the url
+        
+        # for whatever reason the file types are not always consistent
+        # assume ending of first image is primary ending
+        data['ending'] = split[-1].split(".")[-1]
         
         # get image and load
         response = get(img_url)
         load = Image.open(BytesIO(response.content))
-        cover = ImageTk.PhotoImage(load)
+        data['cover'] = ImageTk.PhotoImage(load)
         
         # get all fields and tags
         visible_fields = info.find_all(lambda x: x.has_attr('class') and 'tag-container' in x['class'] and 'hidden' not in x['class'])
@@ -277,18 +274,19 @@ class MainUI(tk.Frame):
         for field_div in visible_fields:
             field_name, vals = field_div.contents[:2]
             fields.append((field_name.strip().strip(":"), [t.contents[0].strip() for t in vals.contents]))
+        data['fields'] = fields
         
         # get number of pages- this should always exist I hope
-        pages = int(info.find('div', text=compile('pages')).string.split()[0])
+        data['pages'] = int(info.find('div', text=compile('pages')).string.split()[0])
         
         # get upload time
-        upload_time = info.find('time').text
+        data['upload'] = info.find('time').text
         
         self.memory.clear()
         # get first image of book
-        self.memory[1] = Image.open(BytesIO(get("".join(("https://i.nhentai.net/galleries/", str(gallery), "/1.", file_ending))).content))
+        self.memory[1] = Image.open(BytesIO(get("https://i.nhentai.net/galleries/{}/1.{}".format(str(data['gallery']), data['ending'])).content))
 
-        q.put((title, subtitle, cover, fields, pages, upload_time, gallery, url, file_ending))
+        self.q.put(0)
 
 
     def viewBook(self):
@@ -298,13 +296,21 @@ class MainUI(tk.Frame):
         Viewer(self) # why is this even a function
 
     
-    def viewSettings(self):
+    def viewSettings(self): # this one too
         Settings(self)
     
     # testing stuff ignore
     def offlineTesting(self):
         self.loadStart()
-        self.sauce_data = ("offline testing", "wow is this legal?", ImageTk.PhotoImage(Image.open("untitled.png").resize((350, 511), Image.ANTIALIAS)), [("Parodies", ("Aokana",)), ("Characters", ("Kurashina Asuka",)), ("Tags", ("lolicon", "flying fish"))], 5, "time", 1, "http://softloli.moe", "png")
+        self.sauce_data = {'title': "offline testing",
+                           'subtitle': "wow is this legal?",
+                           'cover': ImageTk.PhotoImage(Image.open("untitled.png").resize((350, 511), Image.ANTIALIAS)),
+                           'fields': [("Parodies", ("Aokana",)), ("Characters", ("Kurashina Asuka",)), ("Tags", ("lolicon", "flying fish"))],
+                           'pages': 5,
+                           'upload': "time",
+                           'gallery': 1,
+                           'number': "test",
+                           'ending': "png"}
         self.memory[1] = Image.open("u1.png")
         self.loadDone()
         self.renderPreview()
@@ -346,8 +352,8 @@ class Viewer(tk.Toplevel):
         self.root = base.root
         self.base = base
         
-        self.pages = self.base.sauce_data[4]
-        self.gallery = self.base.sauce_data[6]
+        self.pages = self.base.sauce_data['pages']
+        self.gallery = self.base.sauce_data['gallery']
         
         self.img_w, self.img_h = self.base.memory[1].size
         self.win_h = self.base.height - 32
@@ -364,8 +370,8 @@ class Viewer(tk.Toplevel):
         self.q = queue.Queue()
         
         encodes = ("jpg", "png")
-        self.main_ending = self.base.file_ending # assume the first image uses the main encoding
-        self.other_ending = encodes[~encodes.index(self.main_ending)] # lol there has to be a better way to do this
+        self.main_ending = self.base.sauce_data['ending'] # assume the first image uses the main encoding
+        self.other_ending = encodes[~encodes.index(self.main_ending)] # lol nice jank
 
         self.UI()
         self.loadPage()
@@ -403,7 +409,6 @@ class Viewer(tk.Toplevel):
         except KeyError: # background loading has not caught up
             # self.loading = True
             print("load not finished retry in 100ms")
-            self.title("".join((self.base.magic_number, "- page ", str(self.curr_page))))
             self.root.after(100, self.loadPage)
 
 
@@ -413,8 +418,8 @@ class Viewer(tk.Toplevel):
         """
         print("rendering page {}".format(self.curr_page))
         self.viewframe.render(self.base.memory[self.curr_page])
-        self.title("".join((self.base.magic_number, "- page ", str(self.curr_page))))
-
+        self.title("{}- page {}".format(self.base.sauce_data['number'], str(self.curr_page)))
+        
         print("buffering page {}".format(self.curr_page + 1))
         self.bufferNext()
 
@@ -430,7 +435,7 @@ class Viewer(tk.Toplevel):
 
             except KeyError: # start thread to get the next image
                 print("page not loaded downloading")
-                if self.base.magic_number == "test": # testing ignore
+                if self.base.sauce_data['number'] == "test": # testing ignore
                     self.base.memory[self.curr_page + 1] = Image.open("u" + str(self.curr_page + 1) + ".png")
                 else:
                     self.loading = True
@@ -456,7 +461,7 @@ class Viewer(tk.Toplevel):
         to be run with Thread
         """
         print("thread started- fetching image")
-        url = "".join(("https://i.nhentai.net/galleries/", str(gallery), "/", str(page), "."))
+        url = "https://i.nhentai.net/galleries/{}/{}.".format(str(gallery), str(page))
         
         response = get(url + self.main_ending)
         
