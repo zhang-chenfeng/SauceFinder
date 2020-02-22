@@ -139,7 +139,7 @@ class MainUI(tk.Frame):
         for index, (field, tags) in enumerate(fields):
             tk.Label(self.fields_f, text=field + ":", font=(None, 12)).grid(row=index, column=0, sticky='ne')
             tk.Label(self.fields_f, text=",  ".join(tags), font=(None, 12), wraplength=420, justify='left').grid(row=index, column=1, sticky='nw', padx=(10, 0), pady=(0, 20))
-        self.link_b['command'] = lambda: webbrowser.open(url)
+        self.link_b['command'] = lambda: webbrowser.open("https://nhentai.net/g/{}/".format(data['number']))
         self.options_f.grid(row=1, pady=(20, 10), sticky=tk.W)
 
 
