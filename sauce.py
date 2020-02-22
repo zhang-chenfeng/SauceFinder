@@ -126,8 +126,7 @@ class MainUI(tk.Frame):
 
     def renderPreview(self):
         data = self.sauce_data
-        title, subtitle, cover, fields, pages, upload_time, gallery, url, self.file_ending = self.sauce_data
-
+        
         self.title_l['text'] = data['title']
         self.subtitle_l['text'] = data['subtitle']
         self.cover_l['image'] = data['cover']
@@ -142,7 +141,6 @@ class MainUI(tk.Frame):
             tk.Label(self.fields_f, text=",  ".join(tags), font=(None, 12), wraplength=420, justify='left').grid(row=index, column=1, sticky='nw', padx=(10, 0), pady=(0, 20))
         self.link_b['command'] = lambda: webbrowser.open(url)
         self.options_f.grid(row=1, pady=(20, 10), sticky=tk.W)
-    
     
     def errPage(self, title, subtitle):
         self.title_l['text'] = title
