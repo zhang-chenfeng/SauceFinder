@@ -27,7 +27,7 @@ from re import compile
 from threading import Thread
 
 from PIL import Image, ImageTk
-from requests import get
+from requests import get, exceptions
 from bs4 import BeautifulSoup
 from win32api import EnumDisplayMonitors, GetMonitorInfo
 
@@ -143,9 +143,9 @@ class MainUI(tk.Frame):
         self.options_f.grid(row=1, pady=(20, 10), sticky=tk.W)
 
 
-    def errPage(self, title, subtitle):
-        self.title_l['text'] = title
-        self.subtitle_l['text']  = subtitle
+    def errPage(self, data):
+        self.title_l['text'] = data[0]
+        self.subtitle_l['text']  = data[1]
         
         
     def destroyChildren(self, frame):
@@ -203,8 +203,7 @@ class MainUI(tk.Frame):
                 Thread(target=self.getValues).start()
                 self.root.after(100, self.awaitSauce)
             else:
-                self.title_l['text'] = "invalid number"
-                self.subtitle_l['text'] = "无效号码"
+                self.errPage(("invalid number", "无效号码"))
                 self.destroyChildren(self.fields_f)
                 self.cover_l['image'] = self.img_tmp
                 self.options_f.grid_forget()
@@ -217,7 +216,7 @@ class MainUI(tk.Frame):
         try:
             response = self.q.get(False) # if item is not availible raises queue.Empty error
             self.loadDone()
-            self.errPage("File Not Found", "server returned 404") if response else self.renderPreview()
+            self.errPage(response) if response else self.renderPreview()
                 
         except queue.Empty:
             self.root.after(100, self.awaitSauce)
@@ -234,9 +233,17 @@ class MainUI(tk.Frame):
         # magic_number is already a string by implementation but whatever
         url = "https://nhentai.net/g/{}".format(str(data['number']))
         
-        response = get(url)
-        if not response.ok:
-            self.q.put(-1)
+        try:
+            response = get(url, timeout=5)
+        except exceptions.ConnectTimeout: # timeout - either server down or connection is shit
+            self.q.put(("connection timeout", "check your connection"))
+            return
+        except: # fatal error
+            self.q.put(("Fatal Error", "(is your internet working?)"))
+            return
+
+        if not response.ok: # error 404
+            self.q.put(("File Not Found", "server returned 404"))
             return
 
         page = BeautifulSoup(response.text, 'html.parser')
