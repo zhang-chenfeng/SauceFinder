@@ -93,7 +93,7 @@ class MainUI(tk.Frame):
         self.fields_f = tk.Frame(self.side_f)
         self.options_f = tk.Frame(self.side_f)
         self.view_b = tk.Button(self.options_f, width=10, text="View", command=self.viewBook)
-        self.link_b = tk.Button(self.options_f, width=10, text="Link", command=lambda: webbrowser.open("https://nhentai.net/g/{}".format(self.sauce_data['number'])))
+        self.link_b = tk.Button(self.options_f, width=10, text="Link")
         self.down_b = tk.Button(self.options_f, width=10, text="Save")
         
         # UI visualization for testing 
