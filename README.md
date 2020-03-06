@@ -21,11 +21,9 @@ This program will accept your 6 digit number(s) and generate a preview correspon
 ### Installation
 In case you are braindead:
 1. `git clone https://github.com/zhang-chenfeng/SauceFinder.git saucefinder`
-2. `cd saucefinder`
-3. `py -m venv env`
-4. `env\Scripts\activate`
-5. `python -m pip install -r requirements.txt`
-6. `python sauce.py`
+2. `cd saucefinder (activate your venv)`
+3. `python -m pip install -r requirements.txt`
+4. `python sauce.py`
 
 ### Features
 
