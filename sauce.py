@@ -19,7 +19,9 @@
 #------------------------------------------------------------------------------------
 
 import tkinter as tk
+from tkinter.filedialog import askdirectory
 import time
+import os
 import queue
 import webbrowser
 from io import BytesIO
@@ -48,9 +50,12 @@ class MainUI(tk.Frame):
         self.memory = {}
         self.sauce_data = {'title': '', 'subtitle': '', 'cover': None, 'fields': '', 'pages': 0, 'upload': '', 'gallery': '', 'number': '', 'ending': ''}
         self.baseUI()
-        f = open("config.txt", "r")
-        self.viewmode = f.read()
-        f.close()
+        with open("config.txt", "r") as f:
+            try:
+                self.viewmode, self.folder = f.read().split("\n")
+            except ValueError: # bad save file
+                self.viewmode = "scaled"
+                self.folder = "{}/saves".format(os.getcwd())
         self.entry.focus()
         
         
@@ -327,7 +332,7 @@ class MainUI(tk.Frame):
         override destroy method to save settings to file when gui is exited
         """
         x = open("config.txt", "w")
-        x.write(self.viewmode)
+        x.write("\n".join((self.viewmode, self.folder)))
         x.close()
         
         tk.Frame.destroy(self)
@@ -471,10 +476,16 @@ class Viewer(tk.Toplevel):
         print("thread started- fetching image")
         url = "https://i.nhentai.net/galleries/{}/{}.".format(str(base.sauce_data['gallery']), str(page))
         
-        response = get(url + self.main_ending)
+        try:
+            response = get(url + self.main_ending, timeout=5)
+        except:
+            base.memory[page] = Image.open("img.png")
         
         if not response.ok: # 404 file encoding is jank
-            response = get(url + self.other_ending)
+            try:
+                response = get(url + self.other_ending, timeout=5) ## YIKES
+            except:
+                base.memory[page] = Image.open("img.png")
 
         load = Image.open(BytesIO(response.content))
         print("got image")
@@ -504,7 +515,7 @@ class Viewer(tk.Toplevel):
             self.curr_page -= 1
             self.loadPage()
 
-
+    
     def clickHandle(self, event):
         """
         called from click binding and determines next or prev based on mouse position
@@ -613,6 +624,8 @@ class Settings(tk.Toplevel):
         self.base = base
         self.selection = tk.StringVar()
         self.selection.set(self.base.viewmode)
+        self.folder = tk.StringVar()
+        self.folder.set(self.base.folder)
         self.UI()
 
 
@@ -621,26 +634,32 @@ class Settings(tk.Toplevel):
         self.grab_set()
         self.focus()
         
-        self.f1 = tk.Frame(self)
-        self.f1.grid(row=0, padx=(10, 10), pady=(10, 10))
-        self.l = tk.Label(self.f1, text="viewer mode")
+        f1 = tk.Frame(self)
+        f1.grid(row=0, padx=(10, 10), pady=(10, 10))
+        self.l = tk.Label(f1, text="viewer mode")
         self.l.grid(row=0, column=0)
         
-        tk.Radiobutton(self.f1, text="scaled", variable=self.selection, value="scaled").grid(row=0, column=1)
-        tk.Radiobutton(self.f1, text="scrolled", variable=self.selection, value="scrolled").grid(row=0, column=2)
+        tk.Radiobutton(f1, text="scaled", variable=self.selection, value="scaled").grid(row=0, column=1)
+        tk.Radiobutton(f1, text="scrolled", variable=self.selection, value="scrolled").grid(row=0, column=2)
         
-        self.exit_f = tk.Frame(self)
-        self.ok = tk.Button(self.exit_f, width=7, text="ok", command=self.exit)
-        self.cancel = tk.Button(self.exit_f, width=7, text="cancel", command=self.destroy)
+        f2 = tk.Frame(self)
+        f2.grid(row=1, padx=(10, 10), pady=(0, 10))
         
-        self.exit_f.grid(row=1, pady=(0, 10), sticky='ew')
-        self.exit_f.grid_columnconfigure(0, weight=1)
+        tk.Label(f2, textvariable=self.folder).grid(row=0, column=0)
+        tk.Button(f2, text="browse", command=lambda: self.folder.set(askdirectory() or self.folder.get())).grid(row=0, column=1)
+
+        exit_f = tk.Frame(self)
+        self.ok = tk.Button(exit_f, width=7, text="ok", command=self.exit)
+        self.cancel = tk.Button(exit_f, width=7, text="cancel", command=self.destroy)
+        
+        exit_f.grid(row=2, pady=(0, 10), sticky='ew')
+        exit_f.grid_columnconfigure(0, weight=1)
         self.ok.grid(row=0, column=1, padx=(0, 10), sticky='e')
         self.cancel.grid(row=0, column=2, padx=(0, 10), sticky='e')
 
-
+    
     def exit(self):
-        self.base.viewmode = self.selection.get()
+        self.base.viewmode, self.base.folder = self.selection.get(), self.folder.get()
         self.destroy()
 
 
