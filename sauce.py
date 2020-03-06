@@ -93,7 +93,8 @@ class MainUI(tk.Frame):
         self.fields_f = tk.Frame(self.side_f)
         self.options_f = tk.Frame(self.side_f)
         self.view_b = tk.Button(self.options_f, width=10, text="View", command=self.viewBook)
-        self.link_b = tk.Button(self.options_f, width=10, text="Link")
+        self.link_b = tk.Button(self.options_f, width=10, text="Link", command=lambda: webbrowser.open("https://nhentai.net/g/{}".format(self.sauce_data['number'])))
+        self.down_b = tk.Button(self.options_f, width=10, text="Save")
         
         # UI visualization for testing 
         # self.preview_f['bg'] = "red"
@@ -331,9 +332,8 @@ class MainUI(tk.Frame):
         """
         override destroy method to save settings to file when gui is exited
         """
-        x = open("config.txt", "w")
-        x.write("\n".join((self.viewmode, self.folder)))
-        x.close()
+        with open("config.txt", "w") as f:
+            f.write("\n".join((self.viewmode, self.folder)))
         
         tk.Frame.destroy(self)
 
