@@ -57,8 +57,8 @@ class MainUI(tk.Frame):
                 self.viewmode = "scaled"
                 self.folder = "{}/saves".format(os.getcwd())
         self.entry.focus()
-        
-        
+
+
     def baseUI(self):
         self.root.title("Sauce Finder")
         self.img_tmp = ImageTk.PhotoImage(Image.open("tmep.png"))
@@ -94,14 +94,15 @@ class MainUI(tk.Frame):
         self.options_f = tk.Frame(self.side_f)
         self.view_b = tk.Button(self.options_f, width=10, text="View", command=self.viewBook)
         self.link_b = tk.Button(self.options_f, width=10, text="Link")
-        self.down_b = tk.Button(self.options_f, width=10, text="Save")
+        self.down_b = tk.Button(self.options_f, width=10, text="Save", command=self.save)
+        self.down_l = tk.Label(self.options_f, width=15)
         
-        # UI visualization for testing 
-        # self.preview_f['bg'] = "red"
-        # self.cover_l['bg'] = "blue"
-        # self.side_f['bg'] = "green"
-        # self.fields_f['bg'] = "yellow"
-        # self.options_f['bg'] = "white"
+        # UI visualization for testing
+        self.preview_f['bg'] = "red"
+        self.cover_l['bg'] = "blue"
+        self.side_f['bg'] = "green"
+        self.fields_f['bg'] = "yellow"
+        self.options_f['bg'] = "white"
         
         self.pack(padx=(30, 30))
 
@@ -124,10 +125,12 @@ class MainUI(tk.Frame):
         self.preview_f.grid(row=3, pady=(5, 15), sticky='ew')
         self.cover_l.grid(row=0, column=0, padx=(10, 10), sticky='nw')        
         self.side_f.grid(row=0, column=1, padx=(0, 10), sticky='n')
-        self.fields_f.grid(row=0, sticky='n')
+        self.fields_f.grid(row=0, sticky='nw')
         # self.options_f.grid(row=1, pady=(0, 10))
         self.view_b.grid(row=0, column=0, padx=(20, 20))
-        self.link_b.grid(row=0, column=1, padx=(20, 0))
+        self.link_b.grid(row=0, column=1, padx=(20, 20))
+        self.down_b.grid(row=0, column=2, padx=(20, 20))
+        self.down_l.grid(row=0, column=3, padx=(0, 20))
 
 
     def renderPreview(self):
@@ -173,6 +176,7 @@ class MainUI(tk.Frame):
         self.destroyChildren(self.fields_f) # destroy any tags rendered from previous previews
         self.cover_l['image'] = self.img_tmp
         self.options_f.grid_forget()
+        self.down_l['text'] = ''
         print("data fetch started for {}".format(self.sauce_data['number']))
         self.time_track = time.time()
 
@@ -202,16 +206,16 @@ class MainUI(tk.Frame):
             if self.sauce_data['number'] == "test":
                 self.offlineTesting()
                 return
-            
+
             # some validation- won't catch invalid numbers
             if self.sauce_data['number'].isdigit():
                 self.loadStart()
                 Thread(target=self.getValues).start()
                 self.root.after(100, self.awaitSauce)
-            else:
+            else:   
                 self.errPage(("invalid number", "无效号码"))
                 self.destroyChildren(self.fields_f)
-                self.cover_l['image'] = self.img_tmp
+                self.cover_l['image'] = self.img_tmpx   
                 self.options_f.grid_forget()
 
 
@@ -238,7 +242,7 @@ class MainUI(tk.Frame):
         
         # magic_number is already a string by implementation but whatever
         url = "https://nhentai.net/g/{}".format(str(data['number']))
-        
+
         try:
             response = get(url, timeout=5)
         except exceptions.ConnectTimeout: # timeout - either server down or connection is shit
@@ -274,6 +278,7 @@ class MainUI(tk.Frame):
         # for whatever reason the file types are not always consistent
         # assume ending of first image is primary ending
         data['ending'] = split[-1].split(".")[-1]
+        data['other'] = ('jpg', 'png')[~('jpg', 'png').index(data['ending'])]
         
         # get image and load
         response = get(img_url)
@@ -295,10 +300,87 @@ class MainUI(tk.Frame):
         data['upload'] = info.find('time').text
         
         self.memory.clear()
-        # get first image of book
-        self.memory[1] = Image.open(BytesIO(get("https://i.nhentai.net/galleries/{}/1.{}".format(str(data['gallery']), data['ending'])).content))
+        
+        loc = "{}/{}".format(self.folder, data['number'])
+        if os.path.exists(loc):
+            for file in os.scandir(loc):
+                try:
+                    self.memory[int(os.path.splitext(file.name)[0])] = Image.open(file.path)
+                except:
+                    pass
+        try:
+            self.memory[1]
+        except KeyError:
+            # get first image of book
+            self.memory[1] = Image.open(BytesIO(get("https://i.nhentai.net/galleries/{}/1.{}".format(str(data['gallery']), data['ending'])).content))
 
         self.q.put(0)
+    
+    
+    def save(self):
+        # start the render for all of the download processes
+        print("start saveall")
+        print(self.memory)
+        self.d_page = 1
+        self.down_l['text'] = "saving: 0/{}".format(self.sauce_data['pages'])
+        self.root.after(10, self.downprocess)
+        
+    
+    def downprocess(self):
+        print("process page {}".format(self.d_page))
+        if self.d_page > self.sauce_data['pages']:
+            print("download complete")
+            self.down_l['text'] = 'saved'
+        else:
+            try:
+                self.store(self.d_page)
+            except KeyError:
+                Thread(target=self.imgDownload, args=(self.d_page, self.q)).start()
+                self.root.after(100, self.waitImg)
+
+ 
+    def store(self, page):
+        image = self.memory[page]
+        loc = "{}/{}".format(self.folder, self.sauce_data['number'])
+        try:
+            os.mkdir(loc)
+        except FileExistsError:
+            pass
+        img_path = "{}/{}.{}".format(loc, page, {"JPEG": "jpg", "PNG": "png"}[image.format])
+        if not os.path.exists(img_path):
+            image.save(img_path)
+            print("image saved")
+        else:
+            print("image already exists")
+        self.down_l['text'] = "saving: {}/{}".format(self.d_page, self.sauce_data['pages'])
+        self.d_page += 1
+        self.root.after(10, self.downprocess)
+        
+
+    def waitImg(self):
+        try:
+            response = self.q.get(False)
+            self.store(self.d_page)
+        except queue.Empty:
+            self.root.after(100, self.waitImg)
+
+
+    def imgDownload(self, num, q): # the download now runs from here so that a save option is available
+        url = "https://i.nhentai.net/galleries/{}/{}.".format(str(self.sauce_data['gallery']), str(num))
+        print(url + self.sauce_data['ending'])
+        try:
+            response = get(url + self.sauce_data['ending'], timeout=5)
+        except:
+            self.memory[self.d_page] = Image.open("img.png")
+        else:
+            if not response.ok: # 404 file encoding is jank
+                try:
+                    response = get(url + self.sauce_data['other'], timeout=5) ## YIKES
+                except:
+                    self.memory[self.d_page] = Image.open("img.png")
+            load = Image.open(BytesIO(response.content))
+            self.memory[self.d_page] = load
+        q.put(0)
 
 
     def viewBook(self):
@@ -323,6 +405,13 @@ class MainUI(tk.Frame):
                            'gallery': 1,
                            'number': "test",
                            'ending': "png"}
+        loc = "{}/{}".format(self.folder, self.sauce_data['number'])
+        if os.path.exists(loc):
+            for file in os.scandir(loc):
+                try:
+                    self.memory[int(os.path.splitext(file.name)[0])] = Image.open(file.path)
+                except:
+                    pass
         self.memory[1] = Image.open("u1.png")
         self.loadDone()
         self.renderPreview()
@@ -370,14 +459,13 @@ class Viewer(tk.Toplevel):
         self.win_h = self.base.height - 32
         self.xpad = (20, 20)
         self.ypad = (10, 30)
-        
+
         self.curr_page = 1
 
         self.views = {'scaled': Scale, 'scrolled': Scroll}        
         
         self.pressed = False
         self.loading = False
-        
         self.q = queue.Queue()
         
         encodes = ("jpg", "png")
