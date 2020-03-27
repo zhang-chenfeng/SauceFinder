@@ -48,6 +48,7 @@ class MainUI(tk.Frame):
         self.magic_number = 0
         self.loading = False
         self.memory = {}
+        self.cancel = False
         self.sauce_data = {'title': '', 'subtitle': '', 'cover': None, 'fields': '', 'pages': 0, 'upload': '', 'gallery': '', 'number': '', 'ending': ''}
         self.baseUI()
         with open("config.txt", "r") as f:
@@ -91,18 +92,23 @@ class MainUI(tk.Frame):
         self.cover_l = tk.Label(self.preview_f, image=self.img_tmp)
         self.side_f = tk.Frame(self.preview_f)
         self.fields_f = tk.Frame(self.side_f)
-        self.options_f = tk.Frame(self.side_f)
+        self.footer = tk.Frame(self.side_f)
+        self.options_f = tk.Frame(self.footer)
         self.view_b = tk.Button(self.options_f, width=10, text="View", command=self.viewBook)
         self.link_b = tk.Button(self.options_f, width=10, text="Link")
         self.down_b = tk.Button(self.options_f, width=10, text="Save", command=self.save)
-        self.down_l = tk.Label(self.options_f, width=15)
+        self.status_f = tk.Frame(self.footer)
+        self.s_l = tk.Label(self.status_f, width=11)
+        self.down_l = tk.Label(self.status_f, width=7)
+        bar_container = tk.Frame(self.status_f, height=20, width=150, bg='red')
+        self.bar = tk.Frame(bar_container, height=20, width=0, bg='green')
         
         # UI visualization for testing
-        self.preview_f['bg'] = "red"
-        self.cover_l['bg'] = "blue"
-        self.side_f['bg'] = "green"
-        self.fields_f['bg'] = "yellow"
-        self.options_f['bg'] = "white"
+        # self.preview_f['bg'] = "red"
+        # self.cover_l['bg'] = "blue"
+        # self.side_f['bg'] = "green"
+        # self.fields_f['bg'] = "yellow"
+        # self.options_f['bg'] = "white"
         
         self.pack(padx=(30, 30))
 
@@ -112,7 +118,6 @@ class MainUI(tk.Frame):
         self.sub_f.grid(row=1, column=0, sticky="ew", pady=(0, 5))
         self.sub_f.grid_columnconfigure(0, weight=1)
         self.sub_f.grid_columnconfigure(2, weight=1)
-
         self.input_f.grid(row=0, column=1, padx=(20 + 10 * 8, 0))
         self.prompt.grid(row=0, column=0, padx=(5, 5))
         self.entry.grid(row=0, column=1, padx=(5, 5))
@@ -126,11 +131,17 @@ class MainUI(tk.Frame):
         self.cover_l.grid(row=0, column=0, padx=(10, 10), sticky='nw')        
         self.side_f.grid(row=0, column=1, padx=(0, 10), sticky='n')
         self.fields_f.grid(row=0, sticky='nw')
-        # self.options_f.grid(row=1, pady=(0, 10))
+        self.options_f.grid(row=0, pady=(0, 10))
         self.view_b.grid(row=0, column=0, padx=(20, 20))
         self.link_b.grid(row=0, column=1, padx=(20, 20))
         self.down_b.grid(row=0, column=2, padx=(20, 20))
-        self.down_l.grid(row=0, column=3, padx=(0, 20))
+        # self.status_f.grid(row=1, sticky='w')
+        self.s_l.grid(row=0, column=0, padx=(20, 0), sticky='w')
+        self.down_l.grid(row=0, column=1, padx=(0, 5), sticky='e')
+        bar_container.grid(row=0, column=2, padx=(0, 15), sticky='w')
+        bar_container.grid_propagate(0)
+        self.bar.grid(sticky='w')
+        tk.Button(self.status_f, text="cancel", command=self.stop).grid(row=0, column=3)
 
 
     def renderPreview(self):
@@ -147,9 +158,9 @@ class MainUI(tk.Frame):
         
         for index, (field, tags) in enumerate(fields):
             tk.Label(self.fields_f, text=field + ":", font=(None, 12)).grid(row=index, column=0, sticky='ne')
-            tk.Label(self.fields_f, text=",  ".join(tags), font=(None, 12), wraplength=420, justify='left').grid(row=index, column=1, sticky='nw', padx=(10, 0), pady=(0, 20))
+            tk.Label(self.fields_f, text=",  ".join(tags), font=(None, 12), wraplength=420, justify='left').grid(row=index, column=1, sticky='nw', padx=(10, 0), pady=(0, 15))
         self.link_b['command'] = lambda: webbrowser.open("https://nhentai.net/g/{}/".format(data['number']))
-        self.options_f.grid(row=1, pady=(20, 10), sticky=tk.W)
+        self.footer.grid(row=1, pady=(20, 10), sticky=tk.W)
 
 
     def errPage(self, data):
@@ -175,7 +186,8 @@ class MainUI(tk.Frame):
         self.subtitle_l['text'] = "正在加载。。。"
         self.destroyChildren(self.fields_f) # destroy any tags rendered from previous previews
         self.cover_l['image'] = self.img_tmp
-        self.options_f.grid_forget()
+        self.footer.grid_forget()
+        self.status_f.grid_forget()
         self.down_l['text'] = ''
         print("data fetch started for {}".format(self.sauce_data['number']))
         self.time_track = time.time()
@@ -216,7 +228,7 @@ class MainUI(tk.Frame):
                 self.errPage(("invalid number", "无效号码"))
                 self.destroyChildren(self.fields_f)
                 self.cover_l['image'] = self.img_tmpx   
-                self.options_f.grid_forget()
+                self.options_f.grid_forget()    
 
 
     def awaitSauce(self):
@@ -320,47 +332,56 @@ class MainUI(tk.Frame):
     def save(self):
         # start the render for all of the download processes
         print("start saveall")
-        print(self.memory)
+        self.cancel = False
+        self.down_b['state'] = 'disabled'
         self.d_page = 1
-        self.down_l['text'] = "saving: 0/{}".format(self.sauce_data['pages'])
+        self.s_l['text'] = "downloading"
+        self.down_l['text'] = '0/{}'.format(self.sauce_data['pages'])
+        self.status_f.grid(row=1, sticky='w')
         self.root.after(10, self.downprocess)
         
     
     def downprocess(self):
         print("process page {}".format(self.d_page))
-        if self.d_page > self.sauce_data['pages']:
+        if self.cancel:
+            self.s_l['text'] = "cancelled"
+            self.down_b['state'] = 'normal'
+        elif self.d_page > self.sauce_data['pages']:
             print("download complete")
-            self.down_l['text'] = 'saved'
+            self.s_l['text'] = "finished"
+            self.down_b['state'] = 'normal'
         else:
             try:
-                self.store(self.d_page)
+                self.store()
             except KeyError:
                 Thread(target=self.imgDownload, args=(self.d_page, self.q)).start()
                 self.root.after(100, self.waitImg)
 
  
-    def store(self, page):
-        image = self.memory[page]
+    def store(self):
+        page, total = self.d_page, self.sauce_data['pages']
+        image = self.memory[self.d_page]
         loc = "{}/{}".format(self.folder, self.sauce_data['number'])
         try:
             os.mkdir(loc)
         except FileExistsError:
             pass
-        img_path = "{}/{}.{}".format(loc, page, {"JPEG": "jpg", "PNG": "png"}[image.format])
+        img_path = "{}/{}.{}".format(loc, self.d_page, {"JPEG": "jpg", "PNG": "png"}[image.format])
         if not os.path.exists(img_path):
             image.save(img_path)
             print("image saved")
         else:
             print("image already exists")
-        self.down_l['text'] = "saving: {}/{}".format(self.d_page, self.sauce_data['pages'])
+        self.down_l['text'] = "{}/{}".format(page, total)
+        self.bar['width'] = 150 * page // total
         self.d_page += 1
         self.root.after(10, self.downprocess)
-        
+
 
     def waitImg(self):
         try:
             response = self.q.get(False)
-            self.store(self.d_page)
+            self.store()
         except queue.Empty:
             self.root.after(100, self.waitImg)
 
@@ -371,15 +392,15 @@ class MainUI(tk.Frame):
         try:
             response = get(url + self.sauce_data['ending'], timeout=5)
         except:
-            self.memory[self.d_page] = Image.open("img.png")
+            self.memory[num] = Image.open("img.png")
         else:
             if not response.ok: # 404 file encoding is jank
                 try:
                     response = get(url + self.sauce_data['other'], timeout=5) ## YIKES
                 except:
-                    self.memory[self.d_page] = Image.open("img.png")
+                    self.memory[num] = Image.open("img.png")
             load = Image.open(BytesIO(response.content))
-            self.memory[self.d_page] = load
+            self.memory[num] = load
         q.put(0)
 
 
@@ -426,6 +447,10 @@ class MainUI(tk.Frame):
         
         tk.Frame.destroy(self)
 
+
+    def stop(self):
+        self.cancel = True
+        
         
 # all the code from here on down is a complete mess. not that the code above is clean, just after this it gets even worse
 class Viewer(tk.Toplevel):
@@ -538,7 +563,7 @@ class Viewer(tk.Toplevel):
                     self.base.memory[self.curr_page + 1] = Image.open("u" + str(self.curr_page + 1) + ".png")
                 else:
                     self.loading = True
-                    Thread(target=self.downloadImage).start()  
+                    Thread(target=self.base.imgDownload, args=(self.curr_page + 1, self.q)).start()  
                     self.root.after(100, self.waitImage)
 
 
@@ -551,35 +576,6 @@ class Viewer(tk.Toplevel):
             self.loading = False
         except queue.Empty:
             self.root.after(100, self.waitImage)
-
-
-    def downloadImage(self):
-        """
-        download an image and save it
-        
-        to be run with Thread
-        """
-        base = self.base
-        page = self.curr_page + 1
-        print("thread started- fetching image")
-        url = "https://i.nhentai.net/galleries/{}/{}.".format(str(base.sauce_data['gallery']), str(page))
-        
-        try:
-            response = get(url + self.main_ending, timeout=5)
-        except:
-            base.memory[page] = Image.open("img.png")
-        
-        if not response.ok: # 404 file encoding is jank
-            try:
-                response = get(url + self.other_ending, timeout=5) ## YIKES
-            except:
-                base.memory[page] = Image.open("img.png")
-
-        load = Image.open(BytesIO(response.content))
-        print("got image")
-        base.memory[page] = load
-        self.q.put(0)
-        print("thread done")
 
 
     def nextPage(self):
