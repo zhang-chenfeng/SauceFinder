@@ -327,17 +327,21 @@ class MainUI(tk.Frame):
             self.memory[1] = Image.open(BytesIO(get("https://i.nhentai.net/galleries/{}/1.{}".format(str(data['gallery']), data['ending'])).content))
 
         self.q.put(0)
-    
+
     
     def save(self):
         # start the render for all of the download processes
         print("start saveall")
+        self.loading = True
         self.cancel = False
         self.down_b['state'] = 'disabled'
         self.d_page = 1
         self.s_l['text'] = "downloading"
         self.down_l['text'] = '0/{}'.format(self.sauce_data['pages'])
         self.status_f.grid(row=1, sticky='w')
+        self.loc = "{}/{}".format(self.folder, self.sauce_data['number'])
+        if not os.path.exists(self.loc):
+            os.mkdir(self.loc)
         self.root.after(10, self.downprocess)
         
     
@@ -346,10 +350,12 @@ class MainUI(tk.Frame):
         if self.cancel:
             self.s_l['text'] = "cancelled"
             self.down_b['state'] = 'normal'
+            self.loading = False
         elif self.d_page > self.sauce_data['pages']:
             print("download complete")
             self.s_l['text'] = "finished"
             self.down_b['state'] = 'normal'
+            self.loading = False
         else:
             try:
                 self.store()
@@ -361,12 +367,8 @@ class MainUI(tk.Frame):
     def store(self):
         page, total = self.d_page, self.sauce_data['pages']
         image = self.memory[self.d_page]
-        loc = "{}/{}".format(self.folder, self.sauce_data['number'])
-        try:
-            os.mkdir(loc)
-        except FileExistsError:
-            pass
-        img_path = "{}/{}.{}".format(loc, self.d_page, {"JPEG": "jpg", "PNG": "png"}[image.format])
+
+        img_path = "{}/{}.{}".format(self.loc, self.d_page, {"JPEG": "jpg", "PNG": "png"}[image.format])
         if not os.path.exists(img_path):
             image.save(img_path)
             print("image saved")
@@ -486,8 +488,6 @@ class Viewer(tk.Toplevel):
         self.ypad = (10, 30)
 
         self.curr_page = 1
-
-        self.views = {'scaled': Scale, 'scrolled': Scroll}        
         
         self.pressed = False
         self.loading = False
@@ -509,11 +509,11 @@ class Viewer(tk.Toplevel):
         self.focus() # give keyboard focus to the toplevel object(for key bindings)
         self.grab_set() # prevent interaction with main window while viewer is open
         
-        self.viewframe = self.views[self.base.viewmode](self) # this seems pretty jank
+        self.viewframe = {'scaled': Scale, 'scrolled': Scroll}[self.base.viewmode](self) # this seems pretty jank
         self.viewframe.pack(padx=self.xpad, pady=self.ypad)
         
-        self.bind('<Left>', lambda event: self.prevPage())
-        self.bind('<Right>', lambda event: self.nextPage())
+        self.bind('<Left>', lambda event: self.left())
+        self.bind('<Right>', lambda event: self.right())
         
         # restrict 1 action per key press- change page functionality is disabled until key is released
         self.bind('<KeyRelease-Left>', self.resetPress)
@@ -531,7 +531,7 @@ class Viewer(tk.Toplevel):
             self.renderPage() # image is already in the memory and can instantly load 
 
         except KeyError: # background loading has not caught up
-            # self.loading = True
+            self.loading = True
             print("load not finished retry in 100ms")
             self.root.after(100, self.loadPage)
 
@@ -545,7 +545,12 @@ class Viewer(tk.Toplevel):
         self.title("{}- page {}".format(self.base.sauce_data['number'], str(self.curr_page)))
         
         print("buffering page {}".format(self.curr_page + 1))
-        self.bufferNext()
+        if self.base.loading:
+            print("loading from outside")
+            self.loading = False
+        else:
+            print("buffer next page")
+            self.bufferNext()
 
 
     def bufferNext(self):
@@ -583,8 +588,7 @@ class Viewer(tk.Toplevel):
         call to next page, begin loading if conditions allow
         """
         print("next")
-        if not self.pressed and not self.loading and self.curr_page < self.pages:
-            self.pressed = True
+        if not self.loading and self.curr_page < self.pages:
             self.curr_page += 1    
             self.loadPage()
 
@@ -594,8 +598,7 @@ class Viewer(tk.Toplevel):
         same as next but for prev
         """
         print("prev")
-        if not self.pressed and self.curr_page > 1: # previous pages will always be loaded so no need restrict when loading
-            self.pressed = True
+        if self.curr_page > 1: # previous pages will always be loaded so no need restrict when loading
             self.curr_page -= 1
             self.loadPage()
 
@@ -604,9 +607,20 @@ class Viewer(tk.Toplevel):
         """
         called from click binding and determines next or prev based on mouse position
         """
-        self.resetPress()
         self.nextPage() if event.x > self.viewframe.display_width / 2 else self.prevPage()
-
+    
+    
+    def left(self, event=None):
+        if not self.pressed:
+            self.pressed = True
+            self.prevPage()
+    
+    
+    def right(self, event=None):
+        if not self.pressed:
+            self.pressed = True
+            self.nextPage() 
+    
 
     def resetPress(self, event=None):
         """
