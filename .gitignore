@@ -7,3 +7,6 @@ env/
 
 # definitely don't want to upload this
 viewtest/
+
+# or this
+saves/
