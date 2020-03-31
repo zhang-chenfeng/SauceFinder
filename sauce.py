@@ -45,10 +45,10 @@ class MainUI(tk.Frame):
         self.root = root
         self.width, self.height, = dimensions
         self.q = queue.Queue()
-        self.magic_number = 0
         self.loading = False
         self.memory = {}
         self.cancel = False
+        self.v = None
         self.sauce_data = {'title': '', 'subtitle': '', 'cover': None, 'fields': '', 'pages': 0, 'upload': '', 'gallery': '', 'number': '', 'ending': ''}
         self.baseUI()
         with open("config.txt", "r") as f:
@@ -64,39 +64,43 @@ class MainUI(tk.Frame):
         self.root.title("Sauce Finder")
         self.img_tmp = ImageTk.PhotoImage(Image.open("tmep.png"))
         
-        self.head_f = tk.Frame(self, borderwidth=3, relief='ridge')
+        head_f = tk.Frame(self, borderwidth=3, relief='ridge')
         
         # header
-        self.header = tk.Label(self.head_f, width=80, text="Sauce Finder", font=(None, 15))
+        header = tk.Label(head_f, width=80, text="Sauce Finder", font=(None, 15))
         
         # 2nd line frame
-        self.sub_f = tk.Frame(self.head_f)
+        sub_f = tk.Frame(head_f)
 
         # input frame
-        self.input_f = tk.Frame(self.sub_f)
-        self.prompt = tk.Label(self.input_f, text="Enter Sauce")
-        self.entry = tk.Entry(self.input_f, width=8)
+        input_f = tk.Frame(sub_f)
+        prompt = tk.Label(input_f, text="Enter Sauce")
+        self.entry = tk.Entry(input_f, width=8)
         self.entry.bind("<FocusIn>", lambda event: self.entry.selection_range(0, tk.END))
         self.entry.bind("<Return>", lambda event: self.fetchSauce())
-        self.search = tk.Button(self.input_f, width=4, text="GO", command=self.fetchSauce)
+        self.search = tk.Button(input_f, width=4, text="GO", command=self.fetchSauce)
         
         # settings
-        self.settings_b = tk.Button(self.sub_f, width=10, text="settings", command=self.viewSettings)
+        settings_b = tk.Button(sub_f, width=10, text="settings", command=self.viewSettings)
         
         # sub headers
         self.title_l = tk.Label(self, text=" ", font=(None, 14), wraplength=875)
         self.subtitle_l = tk.Label(self, text=" ", font=(None, 12), wraplength=875)
         
         # preview frame
-        self.preview_f = tk.Frame(self)
-        self.cover_l = tk.Label(self.preview_f, image=self.img_tmp)
-        self.side_f = tk.Frame(self.preview_f)
-        self.fields_f = tk.Frame(self.side_f)
-        self.footer = tk.Frame(self.side_f)
-        self.options_f = tk.Frame(self.footer)
-        self.view_b = tk.Button(self.options_f, width=10, text="View", command=self.viewBook)
-        self.link_b = tk.Button(self.options_f, width=10, text="Link")
-        self.down_b = tk.Button(self.options_f, width=10, text="Save", command=self.save)
+        preview_f = tk.Frame(self)
+        self.cover_l = tk.Label(preview_f, image=self.img_tmp)
+        side_f = tk.Frame(preview_f)
+        self.fields_f = tk.Frame(side_f)
+        
+        # bottom part under tags
+        self.footer = tk.Frame(side_f)
+        options_f = tk.Frame(self.footer)
+        view_b = tk.Button(options_f, width=10, text="View", command=self.viewBook)
+        link_b = tk.Button(options_f, width=10, text="Link", command=lambda: webbrowser.open("https://nhentai.net/g/{}/".format(self.sauce_data['number'])))
+        down_b = tk.Button(options_f, width=10, text="Save", command=self.save)
+        
+        # download status frame
         self.status_f = tk.Frame(self.footer)
         self.s_l = tk.Label(self.status_f, width=11)
         self.down_l = tk.Label(self.status_f, width=7)
@@ -104,37 +108,39 @@ class MainUI(tk.Frame):
         self.bar = tk.Frame(bar_container, height=20, width=0, bg='green')
         
         # UI visualization for testing
-        # self.preview_f['bg'] = "red"
+        # preview_f['bg'] = "red"
         # self.cover_l['bg'] = "blue"
-        # self.side_f['bg'] = "green"
+        # side_f['bg'] = "green"
         # self.fields_f['bg'] = "yellow"
-        # self.options_f['bg'] = "white"
+        # options_f['bg'] = "white"
         
         self.pack(padx=(30, 30))
 
-        self.head_f.grid(row=0, pady=(15, 0))
-        self.header.grid(row=0, column=0, pady=(5, 5))
+        head_f.grid(row=0, pady=(15, 0))
+        header.grid(row=0, column=0, pady=(5, 5))
         
-        self.sub_f.grid(row=1, column=0, sticky="ew", pady=(0, 5))
-        self.sub_f.grid_columnconfigure(0, weight=1)
-        self.sub_f.grid_columnconfigure(2, weight=1)
-        self.input_f.grid(row=0, column=1, padx=(20 + 10 * 8, 0))
-        self.prompt.grid(row=0, column=0, padx=(5, 5))
+        sub_f.grid(row=1, column=0, sticky="ew", pady=(0, 5))
+        sub_f.grid_columnconfigure(0, weight=1)
+        sub_f.grid_columnconfigure(2, weight=1)
+        input_f.grid(row=0, column=1, padx=(20 + 10 * 8, 0))
+        prompt.grid(row=0, column=0, padx=(5, 5))
         self.entry.grid(row=0, column=1, padx=(5, 5))
         self.search.grid(row=0, column=2, padx=(5, 5))
-        self.settings_b.grid(row=0, column=2, sticky="e", padx=(0, 20))
+        
+        settings_b.grid(row=0, column=2, sticky="e", padx=(0, 20))
         
         self.title_l.grid(row=1, column=0, pady=(15, 2), sticky='ew')
         self.subtitle_l.grid(row=2, column=0, pady=(5, 10), sticky='ew')
 
-        self.preview_f.grid(row=3, pady=(5, 15), sticky='ew')
+        preview_f.grid(row=3, pady=(5, 15), sticky='ew')
         self.cover_l.grid(row=0, column=0, padx=(10, 10), sticky='nw')        
-        self.side_f.grid(row=0, column=1, padx=(0, 10), sticky='n')
+        side_f.grid(row=0, column=1, padx=(0, 10), sticky='n')
         self.fields_f.grid(row=0, sticky='nw')
-        self.options_f.grid(row=0, pady=(0, 10))
-        self.view_b.grid(row=0, column=0, padx=(20, 20))
-        self.link_b.grid(row=0, column=1, padx=(20, 20))
-        self.down_b.grid(row=0, column=2, padx=(20, 20))
+        options_f.grid(row=0, pady=(0, 10))
+        view_b.grid(row=0, column=0, padx=(20, 20))
+        link_b.grid(row=0, column=1, padx=(20, 20))
+        down_b.grid(row=0, column=2, padx=(20, 20))
+
         # self.status_f.grid(row=1, sticky='w')
         self.s_l.grid(row=0, column=0, padx=(20, 0), sticky='w')
         self.down_l.grid(row=0, column=1, padx=(0, 5), sticky='e')
@@ -159,7 +165,7 @@ class MainUI(tk.Frame):
         for index, (field, tags) in enumerate(fields):
             tk.Label(self.fields_f, text=field + ":", font=(None, 12)).grid(row=index, column=0, sticky='ne')
             tk.Label(self.fields_f, text=",  ".join(tags), font=(None, 12), wraplength=420, justify='left').grid(row=index, column=1, sticky='nw', padx=(10, 0), pady=(0, 15))
-        self.link_b['command'] = lambda: webbrowser.open("https://nhentai.net/g/{}/".format(data['number']))
+        # self.link_b['command'] = lambda: webbrowser.open("https://nhentai.net/g/{}/".format(data['number']))
         self.footer.grid(row=1, pady=(20, 10), sticky=tk.W)
 
 
@@ -180,7 +186,6 @@ class MainUI(tk.Frame):
         """
         procedures to be run when preview loading begins
         """
-        self.loading = True
         self.search['state'] = 'disabled'
         self.title_l['text'] = "Loading..."
         self.subtitle_l['text'] = "正在加载。。。"
@@ -200,17 +205,16 @@ class MainUI(tk.Frame):
         end_time = time.time()
         print("response received {}s elapsed".format(end_time-self.time_track))
         self.search['state'] = 'normal'
-        self.loading = False
 
 
     def fetchSauce(self):
         """
         run when user clicks go/enter key, starts the thread with fetch process and starts waiting for response
         """
-        if not self.loading:
+        if not (self.loading or self.v):
             # focus an arbitrary label to remove focus from the entry field so the onfocus event to highlight the text can trigger when refocused
             # else the entry will remain focused and the event can't trigger so the user would have to spam backspace or highlight the previous input manually
-            self.header.focus() # lol this is really fucking stupid but I can't think of a better way to do this
+            self.cover_l.focus() # lol this is really fucking stupid but I can't think of a better way to do this
             
             self.sauce_data['number'] = self.entry.get()
             
@@ -227,8 +231,8 @@ class MainUI(tk.Frame):
             else:   
                 self.errPage(("invalid number", "无效号码"))
                 self.destroyChildren(self.fields_f)
-                self.cover_l['image'] = self.img_tmpx   
-                self.options_f.grid_forget()    
+                self.cover_l['image'] = self.img_tmp
+                self.footer.grid_forget()    
 
 
     def awaitSauce(self):
@@ -321,7 +325,7 @@ class MainUI(tk.Frame):
                 except:
                     pass
         try:
-            self.memory[1]
+            self.memory[1]  
         except KeyError:
             # get first image of book
             self.memory[1] = Image.open(BytesIO(get("https://i.nhentai.net/galleries/{}/1.{}".format(str(data['gallery']), data['ending'])).content))
@@ -410,7 +414,14 @@ class MainUI(tk.Frame):
         """
         run the viewer
         """
-        Viewer(self) # why is this even a function
+        if not self.v:
+            self.v = Viewer(self) # why is this even a function
+            self.v.protocol("WM_DELETE_WINDOW", self.set_none)
+
+
+    def set_none(self):
+        self.v.destroy()
+        self.v = None
 
     
     def viewSettings(self): # this one too
@@ -507,7 +518,7 @@ class Viewer(tk.Toplevel):
         # this should make it easier to interact with it through alt-tab and such should you need to hide from people watching your screen 
         # self.transient(self.base)
         self.focus() # give keyboard focus to the toplevel object(for key bindings)
-        self.grab_set() # prevent interaction with main window while viewer is open
+        # self.grab_set() # prevent interaction with main window while viewer is open
         
         self.viewframe = {'scaled': Scale, 'scrolled': Scroll}[self.base.viewmode](self) # this seems pretty jank
         self.viewframe.pack(padx=self.xpad, pady=self.ypad)
