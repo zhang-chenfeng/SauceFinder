@@ -11,7 +11,7 @@ This program will accept your 6 digit number(s) and generate a preview correspon
 - [x] data fetch on a seperate thread so the gui doesn't freeze if your internet sucks
 - [x] general code improvements
 - [x] full image previews maybe
-- [ ] downloading & saving?
+- [x] downloading & saving?
 - [x] probably some sort of input validation but anything wrong should just return 404
 - [x] some sort of catch for connection timeout so it doesn't hang forever
 - [x] add clicking support of the viewer
@@ -42,4 +42,4 @@ view your stuffs. Supports navigation with mouse and/or arrow keys
 choose between a scaled and fullsize view
 
 ###### Download 
-~ Coming Soon ~
+works not but I still need to update this
