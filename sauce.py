@@ -14,8 +14,8 @@
 #  just install from requirements.txt
 #
 #
-#  created in Python 3.7.4 but there's no reason why it wouldn't work on any version
-#  that isn't something ridiculous
+#  this is of course a joke but I'm sure there's some use to it
+#
 #------------------------------------------------------------------------------------
 
 import tkinter as tk
@@ -23,10 +23,10 @@ from tkinter.filedialog import askdirectory
 import time
 import os
 import queue
-import webbrowser
 from io import BytesIO
 from re import compile
 from threading import Thread
+from webbrowser import open as browser
 
 from PIL import Image, ImageTk
 from requests import get, exceptions
@@ -81,7 +81,7 @@ class MainUI(tk.Frame):
         self.search = tk.Button(input_f, width=4, text="GO", command=self.fetchSauce)
         
         # settings
-        settings_b = tk.Button(sub_f, width=10, text="settings", command=self.viewSettings)
+        settings_b = tk.Button(sub_f, width=10, text="settings", command=lambda: Settings(self))
         
         # sub headers
         self.title_l = tk.Label(self, text=" ", font=(None, 14), wraplength=875)
@@ -97,8 +97,8 @@ class MainUI(tk.Frame):
         self.footer = tk.Frame(side_f)
         options_f = tk.Frame(self.footer)
         view_b = tk.Button(options_f, width=10, text="View", command=self.viewBook)
-        link_b = tk.Button(options_f, width=10, text="Link", command=lambda: webbrowser.open("https://nhentai.net/g/{}/".format(self.sauce_data['number'])))
-        down_b = tk.Button(options_f, width=10, text="Save", command=self.save)
+        link_b = tk.Button(options_f, width=10, text="Link", command=lambda: browser("https://nhentai.net/g/{}/".format(self.sauce_data['number'])))
+        self.down_b = tk.Button(options_f, width=10, text="Save", command=self.save)
         
         # download status frame
         self.status_f = tk.Frame(self.footer)
@@ -107,13 +107,7 @@ class MainUI(tk.Frame):
         bar_container = tk.Frame(self.status_f, height=20, width=150, bg='red')
         self.bar = tk.Frame(bar_container, height=20, width=0, bg='green')
         
-        # UI visualization for testing
-        # preview_f['bg'] = "red"
-        # self.cover_l['bg'] = "blue"
-        # side_f['bg'] = "green"
-        # self.fields_f['bg'] = "yellow"
-        # options_f['bg'] = "white"
-        
+        # yikes
         self.pack(padx=(30, 30))
 
         head_f.grid(row=0, pady=(15, 0))
@@ -139,9 +133,8 @@ class MainUI(tk.Frame):
         options_f.grid(row=0, pady=(0, 10))
         view_b.grid(row=0, column=0, padx=(20, 20))
         link_b.grid(row=0, column=1, padx=(20, 20))
-        down_b.grid(row=0, column=2, padx=(20, 20))
+        self.down_b.grid(row=0, column=2, padx=(20, 20))
 
-        # self.status_f.grid(row=1, sticky='w')
         self.s_l.grid(row=0, column=0, padx=(20, 0), sticky='w')
         self.down_l.grid(row=0, column=1, padx=(0, 5), sticky='e')
         bar_container.grid(row=0, column=2, padx=(0, 15), sticky='w')
@@ -165,15 +158,15 @@ class MainUI(tk.Frame):
         for index, (field, tags) in enumerate(fields):
             tk.Label(self.fields_f, text=field + ":", font=(None, 12)).grid(row=index, column=0, sticky='ne')
             tk.Label(self.fields_f, text=",  ".join(tags), font=(None, 12), wraplength=420, justify='left').grid(row=index, column=1, sticky='nw', padx=(10, 0), pady=(0, 15))
-        # self.link_b['command'] = lambda: webbrowser.open("https://nhentai.net/g/{}/".format(data['number']))
         self.footer.grid(row=1, pady=(20, 10), sticky=tk.W)
 
 
     def errPage(self, data):
+        # display an errrrrrrrr
         self.title_l['text'] = data[0]
         self.subtitle_l['text']  = data[1]
         
-        
+
     def destroyChildren(self, frame):
         """
         permanently delete all the items spawned inside a widget
@@ -217,12 +210,6 @@ class MainUI(tk.Frame):
             self.cover_l.focus() # lol this is really fucking stupid but I can't think of a better way to do this
             
             self.sauce_data['number'] = self.entry.get()
-            
-            # for offline testing
-            if self.sauce_data['number'] == "test":
-                self.offlineTesting()
-                return
-
             # some validation- won't catch invalid numbers
             if self.sauce_data['number'].isdigit():
                 self.loadStart()
@@ -299,6 +286,9 @@ class MainUI(tk.Frame):
         # get image and load
         response = get(img_url)
         load = Image.open(BytesIO(response.content))
+        w, h = load.size
+        if w > 350:
+            load = load.resize((350, 350 * h // w), Image.ANTIALIAS)
         data['cover'] = ImageTk.PhotoImage(load)
         
         # get all fields and tags
@@ -334,7 +324,11 @@ class MainUI(tk.Frame):
 
     
     def save(self):
-        # start the render for all of the download processes
+        """
+        saves the images so you can fap later or something
+        
+        will download anything that is not in memory
+        """
         print("start saveall")
         self.loading = True
         self.cancel = False
@@ -350,6 +344,7 @@ class MainUI(tk.Frame):
         
     
     def downprocess(self):
+        # calls store which then calls this in a loop until all images are gone through
         print("process page {}".format(self.d_page))
         if self.cancel:
             self.s_l['text'] = "cancelled"
@@ -369,8 +364,11 @@ class MainUI(tk.Frame):
 
  
     def store(self):
+        """
+        will not overwrite anything already existing
+        """
         page, total = self.d_page, self.sauce_data['pages']
-        image = self.memory[self.d_page]
+        image = self.memory[page]
 
         img_path = "{}/{}.{}".format(self.loc, self.d_page, {"JPEG": "jpg", "PNG": "png"}[image.format])
         if not os.path.exists(img_path):
@@ -393,6 +391,9 @@ class MainUI(tk.Frame):
 
 
     def imgDownload(self, num, q): # the download now runs from here so that a save option is available
+        """
+        for downloading images- the viewer also uses this
+        """
         url = "https://i.nhentai.net/galleries/{}/{}.".format(str(self.sauce_data['gallery']), str(num))
         print(url + self.sauce_data['ending'])
         try:
@@ -416,39 +417,12 @@ class MainUI(tk.Frame):
         """
         if not self.v:
             self.v = Viewer(self) # why is this even a function
-            self.v.protocol("WM_DELETE_WINDOW", self.set_none)
+            self.v.protocol("WM_DELETE_WINDOW", self.viewer_die)
 
 
-    def set_none(self):
+    def viewer_die(self):
         self.v.destroy()
         self.v = None
-
-    
-    def viewSettings(self): # this one too
-        Settings(self)
-    
-    # testing stuff ignore
-    def offlineTesting(self):
-        self.loadStart()
-        self.sauce_data = {'title': "offline testing",
-                           'subtitle': "wow is this legal?",
-                           'cover': ImageTk.PhotoImage(Image.open("untitled.png").resize((350, 511), Image.ANTIALIAS)),
-                           'fields': [("Parodies", ("Aokana",)), ("Characters", ("Kurashina Asuka",)), ("Tags", ("lolicon", "flying fish"))],
-                           'pages': 5,
-                           'upload': "time",
-                           'gallery': 1,
-                           'number': "test",
-                           'ending': "png"}
-        loc = "{}/{}".format(self.folder, self.sauce_data['number'])
-        if os.path.exists(loc):
-            for file in os.scandir(loc):
-                try:
-                    self.memory[int(os.path.splitext(file.name)[0])] = Image.open(file.path)
-                except:
-                    pass
-        self.memory[1] = Image.open("u1.png")
-        self.loadDone()
-        self.renderPreview()
 
 
     def destroy(self): # write settings to file upon exit
@@ -457,33 +431,19 @@ class MainUI(tk.Frame):
         """
         with open("config.txt", "w") as f:
             f.write("\n".join((self.viewmode, self.folder)))
-        
         tk.Frame.destroy(self)
 
 
     def stop(self):
         self.cancel = True
-        
-        
-# all the code from here on down is a complete mess. not that the code above is clean, just after this it gets even worse
+
+
+# fix prob if locked and the go to prev the lock will remain
 class Viewer(tk.Toplevel):
     """
     for the viewer- the window that pops up when you click view and shows you the images
     
-    'page' and 'image' both mean the same thing- every page is a jpg image
-    
-    basically how this mess works is that the viewer subclasses a popup and based on the settings
-    will create and display a frame object from either Scale or Scroll
-    
-    both the classes have a render method that gets called to display the next image when button is pressed
-    
-    the first image is already downloaded with the preview data and subsequent images are downloaded when the one previous is displayed
-    eg. viewing page 1 will trigger the download for page 2, and viewing 2 will download 3
-    
-    only 1 image can be downloaded at a time and calls to display next image will be ignored if the image is still downloading
-    eg. if image 2 is displayed and 3 is still downloading, image 3 can not be displayed until it is downloaded as spawning multiple threads
-    at once will make the program hang forever
-    
+    1st image is already downloaded- will download image when viewing previous one- unless download is already happening from outside
     """
     def __init__(self, base):
         tk.Toplevel.__init__(self, base)
@@ -492,13 +452,12 @@ class Viewer(tk.Toplevel):
         
         self.pages = self.base.sauce_data['pages']
         self.gallery = self.base.sauce_data['gallery']
-        
+        self.curr_page = 1
+        # scaling stuff
         self.img_w, self.img_h = self.base.memory[1].size
         self.win_h = self.base.height - 32
         self.xpad = (20, 20)
         self.ypad = (10, 30)
-
-        self.curr_page = 1
         
         self.pressed = False
         self.loading = False
@@ -513,119 +472,91 @@ class Viewer(tk.Toplevel):
 
 
     def UI(self):
-    
-        # decided to make the viewer non-transient so it appears as a seperate window and can be viewed without the main window open
-        # this should make it easier to interact with it through alt-tab and such should you need to hide from people watching your screen 
-        # self.transient(self.base)
+        # viewer is non-transient so it appears as a seperate window and can be viewed without the main window open
+        # makes it easier to interact with it through alt-tab and such should you need to hide from people watching your screen 
+
         self.focus() # give keyboard focus to the toplevel object(for key bindings)
-        # self.grab_set() # prevent interaction with main window while viewer is open
-        
+        # create selected view mode
         self.viewframe = {'scaled': Scale, 'scrolled': Scroll}[self.base.viewmode](self) # this seems pretty jank
         self.viewframe.pack(padx=self.xpad, pady=self.ypad)
         
         self.bind('<Left>', lambda event: self.left())
         self.bind('<Right>', lambda event: self.right())
-        
         # restrict 1 action per key press- change page functionality is disabled until key is released
-        self.bind('<KeyRelease-Left>', self.resetPress)
+        self.bind('<KeyRelease-Left>', self.resetPress) # it just feels more right this way
         self.bind('<KeyRelease-Right>', self.resetPress)
-        
         self.bind("<Button-1>", self.clickHandle)
 
 
     def loadPage(self):
-        """
-        called to load a new image
-        """
-        print("call to load page {}".format(self.curr_page))
+        # redraw the screen- at least try to
+        print("draw", self.curr_page)
         try:
-            self.renderPage() # image is already in the memory and can instantly load 
-
-        except KeyError: # background loading has not caught up
-            self.loading = True
-            print("load not finished retry in 100ms")
+            self.renderPage()
+        except KeyError: # loading has not caught up
+            self.loading = self.curr_page
+            print("not done retry...")
             self.root.after(100, self.loadPage)
 
 
     def renderPage(self):
-        """
-        display the image to the screen and starts the background loading of the next image
-        """
-        print("rendering page {}".format(self.curr_page))
+        # display the image to the screen and starts the background loading of the next image- if needed
+        print("show", self.curr_page)
         self.viewframe.render(self.base.memory[self.curr_page])
         self.title("{}- page {}".format(self.base.sauce_data['number'], str(self.curr_page)))
         
-        print("buffering page {}".format(self.curr_page + 1))
+        print("load", self.curr_page + 1)
         if self.base.loading:
-            print("loading from outside")
-            self.loading = False
+            print("saving...")
+            self.loading = 0
         else:
-            print("buffer next page")
             self.bufferNext()
 
 
     def bufferNext(self):
-        """
-        load the next image
-        """
+        # preload the next image
         if self.curr_page < self.pages:
             try: # image is already in memory nothing to do
                 self.base.memory[self.curr_page + 1]
-                print("page already loaded OK")
 
-            except KeyError: # start thread to get the next image
-                print("page not loaded downloading")
-                if self.base.sauce_data['number'] == "test": # testing ignore
-                    self.base.memory[self.curr_page + 1] = Image.open("u" + str(self.curr_page + 1) + ".png")
-                else:
-                    self.loading = True
-                    Thread(target=self.base.imgDownload, args=(self.curr_page + 1, self.q)).start()  
-                    self.root.after(100, self.waitImage)
+            except KeyError: # start thread to get the next image- uses the image downloader in the main class
+                # self.loading = True
+                Thread(target=self.base.imgDownload, args=(self.curr_page + 1, self.q)).start()  
+                self.root.after(100, self.waitImage)
 
 
     def waitImage(self):
-        """
-        wait for thread to finish and catch reponse in the queue
-        """
         try:
             response = self.q.get(False)
             self.loading = False
         except queue.Empty:
             self.root.after(100, self.waitImage)
 
-
-    def nextPage(self):
-        """
-        call to next page, begin loading if conditions allow
-        """
-        print("next")
-        if not self.loading and self.curr_page < self.pages:
-            self.curr_page += 1    
-            self.loadPage()
-
-
+    # load prev and next pages
     def prevPage(self):
-        """
-        same as next but for prev
-        """
         print("prev")
         if self.curr_page > 1: # previous pages will always be loaded so no need restrict when loading
             self.curr_page -= 1
             self.loadPage()
 
-    
+    def nextPage(self):
+        print("next")
+        if self.loading != self.curr_page and self.curr_page < self.pages:
+            self.curr_page += 1    
+            self.loadPage()
+
+    # for mouse clicks
     def clickHandle(self, event):
         """
         called from click binding and determines next or prev based on mouse position
         """
         self.nextPage() if event.x > self.viewframe.display_width / 2 else self.prevPage()
-    
-    
+
+    # for left and right arrow
     def left(self, event=None):
         if not self.pressed:
             self.pressed = True
             self.prevPage()
-    
     
     def right(self, event=None):
         if not self.pressed:
@@ -739,14 +670,13 @@ class Settings(tk.Toplevel):
 
 
     def UI(self):
-        self.transient(self.base) # usual stuff
-        self.grab_set()
+        self.transient(self.base) # opens with base window
+        self.grab_set() # prevent interation with base window
         self.focus()
-        
+
         f1 = tk.Frame(self)
         f1.grid(row=0, padx=(10, 10), pady=(10, 10))
-        self.l = tk.Label(f1, text="viewer mode")
-        self.l.grid(row=0, column=0)
+        tk.Label(f1, text="viewer mode").grid(row=0, column=0)
         
         tk.Radiobutton(f1, text="scaled", variable=self.selection, value="scaled").grid(row=0, column=1)
         tk.Radiobutton(f1, text="scrolled", variable=self.selection, value="scrolled").grid(row=0, column=2)
@@ -758,15 +688,15 @@ class Settings(tk.Toplevel):
         tk.Button(f2, text="browse", command=lambda: self.folder.set(askdirectory() or self.folder.get())).grid(row=0, column=1)
 
         exit_f = tk.Frame(self)
-        self.ok = tk.Button(exit_f, width=7, text="ok", command=self.exit)
-        self.cancel = tk.Button(exit_f, width=7, text="cancel", command=self.destroy)
+        ok = tk.Button(exit_f, width=7, text="ok", command=self.exit)
+        cancel = tk.Button(exit_f, width=7, text="cancel", command=self.destroy)
         
         exit_f.grid(row=2, pady=(0, 10), sticky='ew')
         exit_f.grid_columnconfigure(0, weight=1)
-        self.ok.grid(row=0, column=1, padx=(0, 10), sticky='e')
-        self.cancel.grid(row=0, column=2, padx=(0, 10), sticky='e')
+        ok.grid(row=0, column=1, padx=(0, 10), sticky='e')
+        cancel.grid(row=0, column=2, padx=(0, 10), sticky='e')
 
-    
+
     def exit(self):
         self.base.viewmode, self.base.folder = self.selection.get(), self.folder.get()
         self.destroy()
