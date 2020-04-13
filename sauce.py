@@ -414,9 +414,9 @@ class MainUI(tk.Frame):
         run the viewer
         """
         if not self.v:
+            print("viewer up")
             self.v = Viewer(self)
             self.v.protocol("WM_DELETE_WINDOW", self.viewer_die)
-            print("viewer up")
 
 
     def viewer_die(self):
@@ -435,7 +435,7 @@ class MainUI(tk.Frame):
 
 
 
-# fix prob if locked and the go to prev the lock will remain
+
 class Viewer(tk.Toplevel):
     """
     for the viewer- the window that pops up when you click view and shows you the images
@@ -457,7 +457,7 @@ class Viewer(tk.Toplevel):
         self.ypad = (10, 30)
         
         self.pressed = False
-        self.loading = False
+        self.loading = 0
         self.q = queue.Queue()
         
         encodes = ("jpg", "png")
@@ -490,15 +490,15 @@ class Viewer(tk.Toplevel):
         try:
             self.renderPage()
         except KeyError: # loading has not caught up
+            self.curr_page -= 1
             self.loading = self.curr_page
-            print("not done retry...")
-            self.root.after(100, self.loadPage)
+            self.title(self.title() + " ... loading ...")
 
 
     def renderPage(self):
         # display the image to the screen and starts the background loading of the next image- if needed
         self.viewframe.render(self.base.memory[self.curr_page])
-        self.title(f"{self.base.sauce_data['number']}- page {self.curr_page}")
+        self.title(f"{self.base.sauce_data['number']}- page {self.curr_page} of {self.base.sauce_data['pages']}")
         
         if self.base.loading:
             print("saving...")
@@ -514,7 +514,6 @@ class Viewer(tk.Toplevel):
                 self.base.memory[self.curr_page + 1]
 
             except KeyError: # start thread to get the next image- uses the image downloader in the main class
-                # self.loading = True
                 Thread(target=self.base.imgDownload, args=(self.curr_page + 1, self.q)).start()  
                 self.root.after(100, self.waitImage)
 
@@ -522,7 +521,8 @@ class Viewer(tk.Toplevel):
     def waitImage(self):
         try:
             response = self.q.get(False)
-            self.loading = False
+            self.loading = 0
+            self.title(f"{self.base.sauce_data['number']}- page {self.curr_page} of {self.base.sauce_data['pages']}")
         except queue.Empty:
             self.root.after(100, self.waitImage)
 
