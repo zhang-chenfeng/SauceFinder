@@ -414,7 +414,7 @@ class MainUI(tk.Frame):
         run the viewer
         """
         if not self.v:
-            self.v = Viewer(self) # why is this even a function
+            self.v = Viewer(self)
             self.v.protocol("WM_DELETE_WINDOW", self.viewer_die)
             print("viewer up")
 
