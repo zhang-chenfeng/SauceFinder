@@ -56,7 +56,7 @@ class MainUI(tk.Frame):
                 self.viewmode, self.folder = f.read().split("\n")
             except ValueError: # bad save file
                 self.viewmode = "scaled"
-                self.folder = "{}/saves".format(os.getcwd())
+                self.folder = f"{os.getcwd()}/saves"
         self.entry.focus()
 
 
@@ -97,7 +97,7 @@ class MainUI(tk.Frame):
         self.footer = tk.Frame(side_f)
         options_f = tk.Frame(self.footer)
         view_b = tk.Button(options_f, width=10, text="View", command=self.viewBook)
-        link_b = tk.Button(options_f, width=10, text="Link", command=lambda: browser("https://nhentai.net/g/{}/".format(self.sauce_data['number'])))
+        link_b = tk.Button(options_f, width=10, text="Link", command=lambda: browser(f"https://nhentai.net/g/{self.sauce_data['number']}/"))
         self.down_b = tk.Button(options_f, width=10, text="Save", command=self.save)
         
         # download status frame
@@ -187,7 +187,7 @@ class MainUI(tk.Frame):
         self.footer.grid_forget()
         self.status_f.grid_forget()
         self.down_l['text'] = ''
-        print("data fetch started for {}".format(self.sauce_data['number']))
+        print(f"data fetch started for {self.sauce_data['number']}")
         self.time_track = time.time()
 
     # and here
@@ -196,7 +196,7 @@ class MainUI(tk.Frame):
         procedures to be run when preview loading ends
         """
         end_time = time.time()
-        print("response received {}s elapsed".format(end_time-self.time_track))
+        print(f"response received {end_time - self.time_track}s elapsed")
         self.search['state'] = 'normal'
 
 
@@ -242,16 +242,14 @@ class MainUI(tk.Frame):
         to be run with Thread due to internet latency
         """
         data = self.sauce_data
-        
-        # magic_number is already a string by implementation but whatever
-        url = "https://nhentai.net/g/{}".format(str(data['number']))
+        url = f"https://nhentai.net/g/{data['number']}"
 
         try:
             response = get(url, timeout=5)
         except exceptions.ConnectTimeout: # timeout - either server down or connection is shit
             self.q.put(("connection timeout", "check your connection"))
             return
-        except: # fatal error
+        except: # probably the result of no internet
             self.q.put(("Fatal Error", "(is your internet working?)"))
             return
 
@@ -287,7 +285,7 @@ class MainUI(tk.Frame):
         response = get(img_url)
         load = Image.open(BytesIO(response.content))
         w, h = load.size
-        if w > 350:
+        if w > 350: # scale the cover if too big
             load = load.resize((350, 350 * h // w), Image.ANTIALIAS)
         data['cover'] = ImageTk.PhotoImage(load)
         
@@ -307,7 +305,7 @@ class MainUI(tk.Frame):
         
         self.memory.clear()
         
-        loc = "{}/{}".format(self.folder, data['number'])
+        loc = f"{self.folder}/{data['number']}"
         if os.path.exists(loc):
             for file in os.scandir(loc):
                 try:
@@ -318,7 +316,7 @@ class MainUI(tk.Frame):
             self.memory[1]  
         except KeyError:
             # get first image of book
-            self.memory[1] = Image.open(BytesIO(get("https://i.nhentai.net/galleries/{}/1.{}".format(str(data['gallery']), data['ending'])).content))
+            self.memory[1] = Image.open(BytesIO(get(f"https://i.nhentai.net/galleries/{data['gallery']}/1.{data['ending']}").content))
 
         self.q.put(0)
 
@@ -335,9 +333,9 @@ class MainUI(tk.Frame):
         self.down_b['state'] = 'disabled'
         self.d_page = 1
         self.s_l['text'] = "downloading"
-        self.down_l['text'] = '0/{}'.format(self.sauce_data['pages'])
+        self.down_l['text'] = f"0/{self.sauce_data['pages']}"
         self.status_f.grid(row=1, sticky='w')
-        self.loc = "{}/{}".format(self.folder, self.sauce_data['number'])
+        self.loc = f"{self.folder}/{self.sauce_data['number']}"
         if not os.path.exists(self.loc):
             os.mkdir(self.loc)
         self.root.after(10, self.downprocess)
@@ -345,7 +343,6 @@ class MainUI(tk.Frame):
     
     def downprocess(self):
         # calls store which then calls this in a loop until all images are gone through
-        print("process page {}".format(self.d_page))
         if self.cancel:
             self.s_l['text'] = "cancelled"
             self.down_b['state'] = 'normal'
@@ -362,7 +359,7 @@ class MainUI(tk.Frame):
                 Thread(target=self.imgDownload, args=(self.d_page, self.q)).start()
                 self.root.after(100, self.waitImg)
 
- 
+
     def store(self):
         """
         will not overwrite anything already existing
@@ -373,13 +370,15 @@ class MainUI(tk.Frame):
         img_path = "{}/{}.{}".format(self.loc, self.d_page, {"JPEG": "jpg", "PNG": "png"}[image.format])
         if not os.path.exists(img_path):
             image.save(img_path)
-            print("image saved")
-        else:
-            print("image already exists")
-        self.down_l['text'] = "{}/{}".format(page, total)
+            print(f"{page} saved")
+        self.down_l['text'] = f"{page}/{total}"
         self.bar['width'] = 150 * page // total
         self.d_page += 1
         self.root.after(10, self.downprocess)
+
+
+    def stop(self):
+        self.cancel = True
 
 
     def waitImg(self):
@@ -394,16 +393,16 @@ class MainUI(tk.Frame):
         """
         for downloading images- the viewer also uses this
         """
-        url = "https://i.nhentai.net/galleries/{}/{}.".format(str(self.sauce_data['gallery']), str(num))
-        print(url + self.sauce_data['ending'])
+        url = f"https://i.nhentai.net/galleries/{self.sauce_data['gallery']}/{num}"
+        print(f"{url}.{self.sauce_data['ending']}")
         try:
-            response = get(url + self.sauce_data['ending'], timeout=5)
+            response = get(f"{url}.{self.sauce_data['ending']}", timeout=5)
         except:
             self.memory[num] = Image.open("img.png")
         else:
             if not response.ok: # 404 file encoding is jank
                 try:
-                    response = get(url + self.sauce_data['other'], timeout=5) ## YIKES
+                    response = get(f"{url}.{self.sauce_data['other']}", timeout=5) ## YIKES
                 except:
                     self.memory[num] = Image.open("img.png")
             load = Image.open(BytesIO(response.content))
@@ -418,11 +417,13 @@ class MainUI(tk.Frame):
         if not self.v:
             self.v = Viewer(self) # why is this even a function
             self.v.protocol("WM_DELETE_WINDOW", self.viewer_die)
+            print("viewer up")
 
 
     def viewer_die(self):
         self.v.destroy()
         self.v = None
+        print("viewer destroy")
 
 
     def destroy(self): # write settings to file upon exit
@@ -433,9 +434,6 @@ class MainUI(tk.Frame):
             f.write("\n".join((self.viewmode, self.folder)))
         tk.Frame.destroy(self)
 
-
-    def stop(self):
-        self.cancel = True
 
 
 # fix prob if locked and the go to prev the lock will remain
@@ -490,7 +488,6 @@ class Viewer(tk.Toplevel):
 
     def loadPage(self):
         # redraw the screen- at least try to
-        print("draw", self.curr_page)
         try:
             self.renderPage()
         except KeyError: # loading has not caught up
@@ -501,11 +498,9 @@ class Viewer(tk.Toplevel):
 
     def renderPage(self):
         # display the image to the screen and starts the background loading of the next image- if needed
-        print("show", self.curr_page)
         self.viewframe.render(self.base.memory[self.curr_page])
-        self.title("{}- page {}".format(self.base.sauce_data['number'], str(self.curr_page)))
+        self.title(f"{self.base.sauce_data['number']}- page {self.curr_page}")
         
-        print("load", self.curr_page + 1)
         if self.base.loading:
             print("saving...")
             self.loading = 0
@@ -534,13 +529,11 @@ class Viewer(tk.Toplevel):
 
     # load prev and next pages
     def prevPage(self):
-        print("prev")
         if self.curr_page > 1: # previous pages will always be loaded so no need restrict when loading
             self.curr_page -= 1
             self.loadPage()
 
     def nextPage(self):
-        print("next")
         if self.loading != self.curr_page and self.curr_page < self.pages:
             self.curr_page += 1    
             self.loadPage()
@@ -584,7 +577,7 @@ class Scale(tk.Frame):
         self.display_width = int(self.scaled_height * base.img_w / base.img_h)
         win_w = self.display_width + sum(base.xpad)
         
-        base.geometry("{}x{}+{}+0".format(win_w, base.win_h, (base.base.width - win_w) // 2)) # base.base- thats not confusing at all
+        base.geometry(f"{win_w}x{base.win_h}+{(base.base.width - win_w) // 2}+0") # base.base- thats not confusing at all
         base.update_idletasks() # required for whatever reason
 
         self.img_l = tk.Label(self)
@@ -618,7 +611,7 @@ class Scroll(tk.Frame):
         win_w = self.display_width + sum(base.xpad)
         screen_height = base.win_h - sum(base.ypad)
         
-        base.geometry("{}x{}+{}+0".format(win_w, base.win_h, (base.base.width - win_w) // 2))
+        base.geometry(f"{win_w}x{base.win_h}+{(base.base.width - win_w) // 2}+0")
         base.update_idletasks()
         
         self.screen = tk.Canvas(self, width=self.display_width, height=screen_height)
