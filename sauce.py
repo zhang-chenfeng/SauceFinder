@@ -162,7 +162,6 @@ class MainUI(tk.Frame):
 
 
     def errPage(self, data):
-        # display an errrrrrrrr
         self.title_l['text'] = data[0]
         self.subtitle_l['text']  = data[1]
         
@@ -174,7 +173,7 @@ class MainUI(tk.Frame):
         for itm in frame.winfo_children():
             itm.destroy()
 
-    # Future loading events go in here
+
     def loadStart(self):
         """
         procedures to be run when preview loading begins
@@ -190,7 +189,7 @@ class MainUI(tk.Frame):
         print(f"data fetch started for {self.sauce_data['number']}")
         self.time_track = time.time()
 
-    # and here
+
     def loadDone(self):
         """
         procedures to be run when preview loading ends
