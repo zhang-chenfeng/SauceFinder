@@ -665,28 +665,30 @@ class Settings(tk.Toplevel):
         self.transient(self.base) # opens with base window
         self.grab_set() # prevent interation with base window
         self.focus()
+        
+        tk.Label(self, text="viewer mode", font=('arial', '9', 'bold')).grid(row=0, column=0, pady=(10, 0))
 
         f1 = tk.Frame(self)
-        f1.grid(row=0, padx=(10, 10), pady=(10, 10))
-        tk.Label(f1, text="viewer mode").grid(row=0, column=0)
+        f1.grid(row=1, padx=(10, 10), pady=(0, 10))
         
-        tk.Radiobutton(f1, text="scaled", variable=self.selection, value="scaled").grid(row=0, column=1)
-        tk.Radiobutton(f1, text="scrolled", variable=self.selection, value="scrolled").grid(row=0, column=2)
+        tk.Radiobutton(f1, text="scaled", variable=self.selection, value="scaled").grid(row=0, column=1, padx=5)
+        tk.Radiobutton(f1, text="scrolled", variable=self.selection, value="scrolled").grid(row=0, column=2, padx=5)
+        
+        # f1_5 = tk.Frame(self)
+        tk.Label(self, text="save folder", font=('arial', '9', 'bold')).grid(row=2)
         
         f2 = tk.Frame(self)
-        f2.grid(row=1, padx=(10, 10), pady=(0, 10))
+        f2.grid(row=3, padx=(10, 10), pady=(0, 10))
         
         tk.Label(f2, textvariable=self.folder).grid(row=0, column=0)
         tk.Button(f2, text="browse", command=lambda: self.folder.set(askdirectory() or self.folder.get())).grid(row=0, column=1)
 
         exit_f = tk.Frame(self)
-        ok = tk.Button(exit_f, width=7, text="ok", command=self.exit)
-        cancel = tk.Button(exit_f, width=7, text="cancel", command=self.destroy)
+        tk.Button(exit_f, width=7, text="ok", command=self.exit).grid(row=0, column=1, padx=(0, 10), sticky='e') # okay
+        tk.Button(exit_f, width=7, text="cancel", command=self.destroy).grid(row=0, column=2, padx=(0, 10), sticky='e') # cancel
         
-        exit_f.grid(row=2, pady=(0, 10), sticky='ew')
+        exit_f.grid(row=4, pady=(0, 10), sticky='ew')
         exit_f.grid_columnconfigure(0, weight=1)
-        ok.grid(row=0, column=1, padx=(0, 10), sticky='e')
-        cancel.grid(row=0, column=2, padx=(0, 10), sticky='e')
 
 
     def exit(self):
