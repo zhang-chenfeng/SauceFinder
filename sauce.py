@@ -74,18 +74,18 @@ class MainUI(tk.Frame):
 
         # input frame
         input_f = tk.Frame(sub_f)
-        prompt = tk.Label(input_f, text="Enter Sauce")
+        prompt = tk.Label(input_f, text="Enter Number")
         self.entry = tk.Entry(input_f, width=8)
         self.entry.bind("<FocusIn>", lambda event: self.entry.selection_range(0, tk.END))
         self.entry.bind("<Return>", lambda event: self.fetchSauce())
-        self.search = tk.Button(input_f, width=4, text="GO", command=self.fetchSauce)
+        self.search = tk.Button(input_f, width=6, text="search", command=self.fetchSauce)
         
         # settings
         settings_b = tk.Button(sub_f, width=10, text="settings", command=lambda: Settings(self))
         
         # sub headers
         self.title_l = tk.Label(self, text=" ", font=(None, 14), wraplength=875)
-        self.subtitle_l = tk.Label(self, text=" ", font=(None, 12), wraplength=875)
+        self.subtitle_l = tk.Label(self, text=" ", font=(None, 13), wraplength=875)
         
         # preview frame
         preview_f = tk.Frame(self)
@@ -156,7 +156,7 @@ class MainUI(tk.Frame):
         fields.append(("Uploaded", [data['upload']]))
         
         for index, (field, tags) in enumerate(fields):
-            tk.Label(self.fields_f, text=field + ":", font=(None, 12)).grid(row=index, column=0, sticky='ne')
+            tk.Label(self.fields_f, text=f"{field}:", font=(None, 12, 'bold')).grid(row=index, column=0, sticky='ne')
             tk.Label(self.fields_f, text=",  ".join(tags), font=(None, 12), wraplength=420, justify='left').grid(row=index, column=1, sticky='nw', padx=(10, 0), pady=(0, 15))
         self.footer.grid(row=1, pady=(20, 10), sticky=tk.W)
 
