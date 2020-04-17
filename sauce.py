@@ -195,7 +195,7 @@ class MainUI(tk.Frame):
         procedures to be run when preview loading ends
         """
         end_time = time.time()
-        print(f"response received {end_time - self.time_track}s elapsed")
+        print(f"response received {end_time - self.time_track:.3f}s elapsed")
         self.search['state'] = 'normal'
 
 
@@ -666,16 +666,16 @@ class Settings(tk.Toplevel):
         self.grab_set() # prevent interation with base window
         self.focus()
         
-        tk.Label(self, text="viewer mode", font=('arial', '9', 'bold')).grid(row=0, column=0, pady=(10, 0))
+        tk.Label(self, text="image view mode", font=(None, 9, 'bold')).grid(row=0, column=0, pady=(10, 0))
 
         f1 = tk.Frame(self)
         f1.grid(row=1, padx=(10, 10), pady=(0, 10))
         
         tk.Radiobutton(f1, text="scaled", variable=self.selection, value="scaled").grid(row=0, column=1, padx=5)
-        tk.Radiobutton(f1, text="scrolled", variable=self.selection, value="scrolled").grid(row=0, column=2, padx=5)
+        tk.Radiobutton(f1, text="fullsize", variable=self.selection, value="scrolled").grid(row=0, column=2, padx=5)
         
         # f1_5 = tk.Frame(self)
-        tk.Label(self, text="save folder", font=('arial', '9', 'bold')).grid(row=2)
+        tk.Label(self, text="save folder", font=(None, 9, 'bold')).grid(row=2)
         
         f2 = tk.Frame(self)
         f2.grid(row=3, padx=(10, 10), pady=(0, 10))
