@@ -16,7 +16,6 @@ This program will accept your 6 digit number(s) and generate a preview correspon
 - [x] some sort of catch for connection timeout so it doesn't hang forever
 - [x] add clicking support of the viewer
 - [x] image downloading in backgrounds
-- [ ] put comments so people can actually read my spageti
 
 ### Installation
 In case you are braindead:
