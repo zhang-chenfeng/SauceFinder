@@ -26,15 +26,15 @@ In case you are braindead:
 
 ### Usage
 
-###### Searching
-![search](https://cdn.discordapp.com/attachments/509538544457351193/677597134543126598/unknown.png)\
-search your 6 digit numbers
-
-###### Open's view
+###### UI
+![UI](https://cdn.discordapp.com/attachments/496020212764901387/709459413919989760/unknown.png)\
+UI Elements
+###### Viewer
+![view](https://cdn.discordapp.com/attachments/496020212764901387/709528533889843220/viewer_2.png)
 view your stuffs. Supports navigation with mouse and/or arrow keys
 
 ###### Settings
-`![sidebyside](futurelink)`\
+![setting](https://cdn.discordapp.com/attachments/496020212764901387/709528532195213442/setting.png)\
 choose between a scaled and fullsize view
 
 ###### Download 
