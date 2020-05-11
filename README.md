@@ -24,16 +24,13 @@ In case you are braindead:
 3. `python -m pip install -r requirements.txt`
 4. `python sauce.py`
 
-### Features
+### Usage
 
 ###### Searching
 ![search](https://cdn.discordapp.com/attachments/509538544457351193/677597134543126598/unknown.png)\
 search your 6 digit numbers
 
-###### Preview
-view preview with titles, cover photo, tags, pages, and upload date
-
-###### Viewing
+###### Open's view
 view your stuffs. Supports navigation with mouse and/or arrow keys
 
 ###### Settings
