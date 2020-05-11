@@ -33,10 +33,9 @@ from requests import get, exceptions
 from bs4 import BeautifulSoup
 from win32api import EnumDisplayMonitors, GetMonitorInfo
 
-# 177978 for testing - this one hentai literaly has every possible jank that breaks my code
 
 
-class MainUI(tk.Frame):
+class SauceFinder(tk.Frame):
     """
     defines the main window
     """
@@ -63,7 +62,7 @@ class MainUI(tk.Frame):
     def baseUI(self):
         self.root.title("Sauce Finder")
         self.img_tmp = ImageTk.PhotoImage(Image.open("tmep.png"))
-        
+
         head_f = tk.Frame(self, borderwidth=3, relief='ridge')
         
         # header
@@ -86,13 +85,13 @@ class MainUI(tk.Frame):
         # sub headers
         self.title_l = tk.Label(self, text=" ", font=(None, 14), wraplength=875)
         self.subtitle_l = tk.Label(self, text=" ", font=(None, 13), wraplength=875)
-        
+
         # preview frame
         preview_f = tk.Frame(self)
         self.cover_l = tk.Label(preview_f, image=self.img_tmp)
         side_f = tk.Frame(preview_f)
         self.fields_f = tk.Frame(side_f)
-        
+
         # bottom part under tags
         self.footer = tk.Frame(side_f)
         options_f = tk.Frame(self.footer)
@@ -245,7 +244,7 @@ class MainUI(tk.Frame):
 
         try:
             response = get(url, timeout=5)
-        except exceptions.ConnectTimeout: # timeout - either server down or connection is shit
+        except exceptions.ConnectTimeout: # timeout - either server down or connection is bad
             self.q.put(("connection timeout", "check your connection"))
             return
         except: # probably the result of no internet
@@ -279,8 +278,8 @@ class MainUI(tk.Frame):
         # assume ending of first image is primary ending
         data['ending'] = split[-1].split(".")[-1]
         data['other'] = ('jpg', 'png')[~('jpg', 'png').index(data['ending'])]
-        
-        # get image and load
+
+        # get cover image and load
         response = get(img_url)
         load = Image.open(BytesIO(response.content))
         w, h = load.size
@@ -399,7 +398,7 @@ class MainUI(tk.Frame):
         except:
             self.memory[num] = Image.open("img.png")
         else:
-            if not response.ok: # 404 file encoding is jank
+            if not response.ok: # file encoding is jank
                 try:
                     response = get(f"{url}.{self.sauce_data['other']}", timeout=5) ## YIKES
                 except:
@@ -446,23 +445,22 @@ class Viewer(tk.Toplevel):
         tk.Toplevel.__init__(self, base)
         self.root = base.root
         self.base = base
-        
-        self.pages = self.base.sauce_data['pages']
-        self.gallery = self.base.sauce_data['gallery']
+
+        self.pages = base.sauce_data['pages']
+        self.gallery = base.sauce_data['gallery']
         self.curr_page = 1
         # scaling stuff
         self.img_w, self.img_h = self.base.memory[1].size
         self.win_h = self.base.height - 32
         self.xpad = (20, 20)
         self.ypad = (10, 30)
-        
+
         self.pressed = False
         self.loading = 0
         self.q = queue.Queue()
-        
-        encodes = ("jpg", "png")
+
         self.main_ending = self.base.sauce_data['ending'] # assume the first image uses the main encoding
-        self.other_ending = encodes[~encodes.index(self.main_ending)] # lol nice jank
+        self.other_ending = self.base.sauce_data['ending'] # lol nice jank
 
         self.UI()
         self.loadPage()
@@ -482,7 +480,7 @@ class Viewer(tk.Toplevel):
         # restrict 1 action per key press- change page functionality is disabled until key is released
         self.bind('<KeyRelease-Left>', self.resetPress) # it just feels more right this way
         self.bind('<KeyRelease-Right>', self.resetPress)
-        self.bind("<Button-1>", self.clickHandle)
+        self.bind("<Button-1>", self.click)
 
 
     def loadPage(self):
@@ -538,7 +536,7 @@ class Viewer(tk.Toplevel):
             self.loadPage()
 
     # for mouse clicks
-    def clickHandle(self, event):
+    def click(self, event):
         """
         called from click binding and determines next or prev based on mouse position
         """
@@ -704,7 +702,7 @@ def main():
             break
 
     root = tk.Tk()
-    gui = MainUI(root, info['Work'][2:])
+    gui = SauceFinder(root, info['Work'][2:])
     root.mainloop()
 
 
