@@ -38,4 +38,5 @@ view your stuffs. Supports navigation with mouse and/or arrow keys
 choose between a scaled and fullsize view
 
 ###### Download 
-works not but I still need to update this
+![down](https://cdn.discordapp.com/attachments/496020212764901387/709544131076161546/down_2.png)\
+save images to local
