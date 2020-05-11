@@ -30,7 +30,7 @@ In case you are braindead:
 ![UI](https://cdn.discordapp.com/attachments/496020212764901387/709459413919989760/unknown.png)\
 UI Elements
 #### Viewer
-![view](https://cdn.discordapp.com/attachments/496020212764901387/709528533889843220/viewer_2.png)
+![view](https://cdn.discordapp.com/attachments/496020212764901387/709528533889843220/viewer_2.png)\
 view your stuffs. Supports navigation with mouse and/or arrow keys
 
 #### Settings
