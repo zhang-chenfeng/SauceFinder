@@ -204,9 +204,8 @@ class SauceFinder(tk.Frame):
         run when user clicks go/enter key, starts the thread with fetch process and starts waiting for response
         """
         if not (self.loading or self.v):
-            # focus an arbitrary label to remove focus from the entry field so the onfocus event to highlight the text can trigger when refocused
-            # else the entry will remain focused and the event can't trigger so the user would have to spam backspace or highlight the previous input manually
-            self.cover_l.focus() # lol this is really fucking stupid but I can't think of a better way to do this
+            # remove focus form entry so onfocus event can trigger again
+            self.cover_l.focus()
             
             self.sauce_data['number'] = self.entry.get()
             # some validation- won't catch invalid numbers
@@ -252,7 +251,7 @@ class SauceFinder(tk.Frame):
             self.q.put(("Fatal Error", "(is your internet working?)"))
             return
 
-        if not response.ok: # error 404
+        if not response.ok: # probably error 404
             self.q.put(("File Not Found", "server returned 404"))
             return
 
@@ -273,7 +272,7 @@ class SauceFinder(tk.Frame):
         img_url = cover_container.find('img')['data-src']
         split = img_url.split("/")
         
-        data['gallery'] = split[-2] # not the be confused with the gallery in the url
+        data['gallery'] = split[-2]
         
         # for whatever reason the file types are not always consistent
         # assume ending of first image is primary ending
@@ -309,7 +308,7 @@ class SauceFinder(tk.Frame):
             for file in os.scandir(loc):
                 try:
                     self.memory[int(os.path.splitext(file.name)[0])] = Image.open(file.path)
-                except:
+                except: # for whatever reason the image can not be processed
                     pass
         try:
             self.memory[1]  
@@ -323,7 +322,7 @@ class SauceFinder(tk.Frame):
     def save(self):
         """
         saves the images so you can fap later or something
-        
+
         will download anything that is not in memory
         """
         print("start saveall")
@@ -338,8 +337,8 @@ class SauceFinder(tk.Frame):
         if not os.path.exists(self.loc):
             os.mkdir(self.loc)
         self.root.after(10, self.downprocess)
-        
-    
+
+
     def downprocess(self):
         # calls store which then calls this in a loop until all images are gone through
         if self.cancel:
@@ -367,7 +366,7 @@ class SauceFinder(tk.Frame):
         image = self.memory[page]
 
         img_path = "{}/{}.{}".format(self.loc, self.d_page, {"JPEG": "jpg", "PNG": "png"}[image.format])
-        if not os.path.exists(img_path):
+        if not os.path.exists(img_path): # won't overwrite
             image.save(img_path)
             print(f"{page} saved")
         self.down_l['text'] = f"{page}/{total}"
@@ -396,10 +395,11 @@ class SauceFinder(tk.Frame):
         print(f"{url}.{self.sauce_data['ending']}")
         try:
             response = get(f"{url}.{self.sauce_data['ending']}", timeout=5)
-        except:
+        except: # loading missing image if download fail
             self.memory[num] = Image.open("img.png")
         else:
             if not response.ok: # file encoding is jank
+                # need to repeat this again is there a better way to do this
                 try:
                     response = get(f"{url}.{self.sauce_data['other']}", timeout=5) ## YIKES
                 except:
