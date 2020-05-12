@@ -28,16 +28,16 @@ In case you are braindead:
 
 #### UI
 UI Elements\
-![UI](https://cdn.discordapp.com/attachments/496020212764901387/709842419306463242/main.png)
+<img src="https://cdn.discordapp.com/attachments/496020212764901387/709842419306463242/main.png" width="600">
 
 #### Viewer
 Viewer supports navigation with mouse and/or arrow keys\
-![view](https://cdn.discordapp.com/attachments/496020212764901387/709833761130414171/viewer_2.png)
+<img src="https://cdn.discordapp.com/attachments/496020212764901387/709833761130414171/viewer_2.png" width="400">
 
 #### Settings
 Choose between a scaled and fullsize view\
-![setting](https://cdn.discordapp.com/attachments/496020212764901387/709528532195213442/setting.png)
+<img src="https://cdn.discordapp.com/attachments/496020212764901387/709528532195213442/setting.png" width="300">
 
 #### Download
 Save images to local\
-![down](https://cdn.discordapp.com/attachments/496020212764901387/709843641597821088/down.png)
+<img src="https://cdn.discordapp.com/attachments/496020212764901387/709843641597821088/down.png" width="600">
