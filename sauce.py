@@ -144,7 +144,8 @@ class SauceFinder(tk.Frame):
 
     def renderPreview(self):
         data = self.sauce_data
-        
+
+        data['number'] = 'testing'
         self.title_l['text'] = data['title']
         self.subtitle_l['text'] = data['subtitle']
         self.cover_l['image'] = data['cover']
@@ -669,8 +670,8 @@ class Settings(tk.Toplevel):
         f1 = tk.Frame(self)
         f1.grid(row=1, padx=(10, 10), pady=(0, 10))
         
-        tk.Radiobutton(f1, text="scaled", variable=self.selection, value="scaled").grid(row=0, column=1, padx=5)
-        tk.Radiobutton(f1, text="fullsize", variable=self.selection, value="scrolled").grid(row=0, column=2, padx=5)
+        tk.Radiobutton(f1, text="scaled", variable=self.selection, value="scaled").grid(row=0, column=1, padx=10)
+        tk.Radiobutton(f1, text="fullsize", variable=self.selection, value="scrolled").grid(row=0, column=2, padx=10)
         
         # f1_5 = tk.Frame(self)
         tk.Label(self, text="save folder", font=(None, 9, 'bold')).grid(row=2)
