@@ -27,16 +27,17 @@ In case you are braindead:
 ### Usage
 
 #### UI
-![UI](https://cdn.discordapp.com/attachments/496020212764901387/709459413919989760/unknown.png)\
-UI Elements
+UI Elements\
+![UI](https://cdn.discordapp.com/attachments/496020212764901387/709842419306463242/main.png)
+
 #### Viewer
-![view](https://cdn.discordapp.com/attachments/496020212764901387/709833761130414171/viewer_2.png)\
-view your stuffs. Supports navigation with mouse and/or arrow keys
+Viewer supports navigation with mouse and/or arrow keys\
+![view](https://cdn.discordapp.com/attachments/496020212764901387/709833761130414171/viewer_2.png)
 
 #### Settings
-![setting](https://cdn.discordapp.com/attachments/496020212764901387/709528532195213442/setting.png)\
-choose between a scaled and fullsize view
+Choose between a scaled and fullsize view\
+![setting](https://cdn.discordapp.com/attachments/496020212764901387/709528532195213442/setting.png)
 
-#### Download 
-![down](https://cdn.discordapp.com/attachments/496020212764901387/709544131076161546/down_2.png)\
-save images to local
+#### Download
+Save images to local\
+![down](https://cdn.discordapp.com/attachments/496020212764901387/709843641597821088/down.png)
