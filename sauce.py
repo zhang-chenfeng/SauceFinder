@@ -489,8 +489,9 @@ class Viewer(tk.Toplevel):
             self.renderPage()
         except KeyError: # loading has not caught up
             self.curr_page -= 1
-            self.loading = self.curr_page
-            self.title(self.title() + " ... loading ...")
+            self.title(f"{self.base.sauce_data['number']}- page {self.curr_page} of {self.base.sauce_data['pages']} ... loading ...")
+            if not self.base.loading:
+                self.loading = self.curr_page
 
 
     def renderPage(self):
@@ -500,7 +501,6 @@ class Viewer(tk.Toplevel):
         
         if self.base.loading:
             print("saving...")
-            self.loading = 0
         else:
             self.bufferNext()
 
