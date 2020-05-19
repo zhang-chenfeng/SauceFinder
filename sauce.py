@@ -145,7 +145,6 @@ class SauceFinder(tk.Frame):
     def renderPreview(self):
         data = self.sauce_data
 
-        data['number'] = 'testing'
         self.title_l['text'] = data['title']
         self.subtitle_l['text'] = data['subtitle']
         self.cover_l['image'] = data['cover']
