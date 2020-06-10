@@ -3,6 +3,8 @@
 This program will accept your 6 digit number(s) and generate a preview corresponding to the respective gallery number of a certain website that begins with the letter 'n'
 
 
+*still not sure whether or not there is an api. apparently there is an undocumented one?*
+
 ### TODO
 - [x] Image preview
 - [x] Display tags correctly
