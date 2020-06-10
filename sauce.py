@@ -151,11 +151,9 @@ class SauceFinder(tk.Frame):
 
         # render fields & tags
         fields = data['fields']
-        fields.append(("Pages", [str(data['pages'])]))
-        fields.append(("Uploaded", [data['upload']]))
         
         for index, (field, tags) in enumerate(fields):
-            tk.Label(self.fields_f, text=f"{field}:", font=(None, 12, 'bold')).grid(row=index, column=0, sticky='ne')
+            tk.Label(self.fields_f, text=field, font=(None, 12, 'bold')).grid(row=index, column=0, sticky='ne')
             tk.Label(self.fields_f, text=",  ".join(tags), font=(None, 12), wraplength=420, justify='left').grid(row=index, column=1, sticky='nw', padx=(10, 0), pady=(0, 15))
         self.footer.grid(row=1, pady=(20, 10), sticky=tk.W)
 
@@ -210,7 +208,7 @@ class SauceFinder(tk.Frame):
             # some validation- won't catch invalid numbers
             if self.sauce_data['number'].isdigit():
                 self.loadStart()
-                Thread(target=self.getValues).start()
+                Thread(target=self.getFixed).start()
                 self.root.after(100, self.awaitSauce)
             else:   
                 self.errPage(("invalid number", "无效号码"))
@@ -230,13 +228,91 @@ class SauceFinder(tk.Frame):
                 
         except queue.Empty:
             self.root.after(100, self.awaitSauce)
+    
+    
+    def getFixed(self):
+        data = self.sauce_data
+        url = f"https://nhentai.net/g/{data['number']}"
 
+        try:
+            response = get(url, timeout=5)
+        except exceptions.ConnectTimeout: # timeout - either server down or connection is bad
+            self.q.put(("connection timeout", "check your connection"))
+            return
+        except: # probably the result of no internet
+            self.q.put(("Fatal Error", "(is your internet working?)"))
+            return
 
-    def getValues(self):
-        """
-        get the html response and process out the required information- also predownload some images
+        if not response.ok: # probably error 404
+            self.q.put(("File Not Found", "server returned 404"))
+            return
         
-        to be run with Thread due to internet latency
+        page = BeautifulSoup(response.text, 'html.parser')
+
+        blank_tag = page.new_tag('div')
+        blank_tag.string = ""
+
+        info = page.find('div', id='info')
+        
+        data['title'] = "".join(s for s in (info.find('h1', class_='title') or blank_tag).strings)
+        data['subtitle'] = "".join(s for s in (info.find('h2', class_='title') or blank_tag).strings)
+
+        fields = []
+        for tag in info.find('section', id='tags'):
+            if 'hidden' not in tag['class']:
+                ls = tag.stripped_strings
+                cat = next(ls)
+                tags = list(ls)[::2]
+                fields.append((cat, tags))
+                if cat == "Pages:":
+                    data['pages'] = int(tags[0])
+        data['fields'] = fields
+        
+        # cover
+        cover_container = page.find('div', id='cover')
+        img_url = cover_container.find('img', class_='lazyload')['data-src']
+        split = img_url.split("/")
+        data['gallery'] = split[-2]
+        
+        # for whatever reason the file types are not always consistent
+        # assume ending of first image is primary ending
+        data['ending'] = split[-1].split(".")[-1]
+        data['other'] = ('jpg', 'png')[~('jpg', 'png').index(data['ending'])]
+        
+        # get cover image and load
+        response = get(img_url)
+        load = Image.open(BytesIO(response.content))
+        w, h = load.size
+        if w > 350: # scale the cover if too big
+            load = load.resize((350, 350 * h // w), Image.ANTIALIAS)
+        data['cover'] = ImageTk.PhotoImage(load)
+
+        self.memory.clear()
+        
+        loc = f"{self.folder}/{data['number']}"
+        if os.path.exists(loc):
+            for file in os.scandir(loc):
+                try:
+                    self.memory[int(os.path.splitext(file.name)[0])] = Image.open(file.path)
+                except: # for whatever reason the image can not be processed
+                    pass
+        try:
+            self.memory[1]  
+        except KeyError:
+            # get first image of book
+            self.memory[1] = Image.open(BytesIO(get(f"https://i.nhentai.net/galleries/{data['gallery']}/1.{data['ending']}").content))
+
+        self.q.put(0)
+
+
+    def getValues_LEGACY(self):
+        """
+        No longer functional
+
+
+        This worked on the old version of the site up that was updated around 06/2020
+        
+        rip why no api
         """
         data = self.sauce_data
         url = f"https://nhentai.net/g/{data['number']}"
