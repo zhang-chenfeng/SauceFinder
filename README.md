@@ -19,7 +19,7 @@ This program will accept your 6 digit number(s) and generate a preview correspon
 - [x] image downloading in backgrounds
 
 ### Installation
-In case you are braindead:
+Something along these lines:
 1. `git clone https://github.com/zhang-chenfeng/SauceFinder.git saucefinder`
 2. `cd saucefinder (activate your venv)`
 3. `python -m pip install -r requirements.txt`
