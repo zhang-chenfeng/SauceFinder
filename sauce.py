@@ -254,8 +254,8 @@ class SauceFinder(tk.Frame):
 
         info = page.find('div', id='info')
         
-        data['title'] = "".join(s for s in (info.find('h1', class_='title') or blank_tag).strings)
-        data['subtitle'] = "".join(s for s in (info.find('h2', class_='title') or blank_tag).strings)
+        data['title'] = "".join((info.find('h1', class_='title') or blank_tag).strings)
+        data['subtitle'] = "".join((info.find('h2', class_='title') or blank_tag).strings)
 
         fields = []
         for tag in info.find('section', id='tags'):
