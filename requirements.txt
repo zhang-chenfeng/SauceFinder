@@ -3,7 +3,7 @@ bs4==0.0.1
 certifi==2019.11.28
 chardet==3.0.4
 idna==2.8
-Pillow==7.0.0
+Pillow==8.3.2
 pywin32==227
 requests==2.22.0
 soupsieve==1.9.5
